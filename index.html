@@ -204,6 +204,25 @@ tr.st-rien td,tr.st-absent td{background:#fdf3f2}tr.st-disp td{background:#f1f5f
 table.cl td:first-child+td,table.cl th:first-child+th{text-align:left}
 #main .tablewrap table.cl:not(.bil) td:first-child{text-align:left}
 table.bil td small{color:var(--repere)}
+.note select.nsel{min-height:38px;width:auto;min-width:72px;padding:4px 6px}
+.note .pct{width:96px;min-height:34px;margin-top:4px}
+.note td{vertical-align:top}
+.note b.tot{font:800 24px/1 var(--d);font-stretch:74%}
+.note .aides{white-space:normal;min-width:220px;text-align:left}
+.alerte{margin-top:4px;color:var(--ligne-fonce);font-weight:700}
+label.coche.mini{min-height:38px;padding:4px 10px;margin:0;font-weight:400}
+label.coche.mini input{width:20px;height:20px}
+.grille2 label{display:flex;flex-direction:column;gap:4px;font-size:14px;font-weight:700}
+.grille2 label input,.grille2 label select{font-weight:400}
+svg.courbe{width:100%;max-width:640px;height:auto}
+svg.courbe .g{stroke:var(--trait);stroke-dasharray:4 4}svg.courbe .l{fill:none;stroke:var(--ligne);stroke-width:3}
+svg.courbe .p{fill:var(--ligne)}svg.courbe text{font:12px var(--t);fill:var(--repere)}svg.courbe .v{font-weight:700;fill:var(--encre)}
+svg.radar2{width:100%;max-width:360px;height:auto}
+svg.radar2 .ring{fill:none;stroke:var(--trait)}svg.radar2 text{font:11px var(--t);fill:var(--repere)}
+svg.radar2 .deb{fill:rgba(90,100,117,.15);stroke:#5A6475;stroke-width:2;stroke-dasharray:6 4}
+svg.radar2 .fin{fill:rgba(234,88,12,.18);stroke:#EA580C;stroke-width:3}
+.leg{display:inline-block;width:22px;height:0;border-top:3px solid #EA580C;vertical-align:middle}.leg.deb{border-top:3px dashed #5A6475}
+@media print{.noprint,#onglets,.barre #classes{display:none!important}body{background:#fff}.carte{break-inside:avoid;border-color:#bbb}select{appearance:none;border:0;background:none;padding:0}}
 .qr-plein{position:fixed;inset:0;background:#fff;color:#14202e;z-index:50;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px}
 .qr-plein .qrbox svg{width:min(80vh,90vw);height:auto}
 .qr-plein h2{margin:0 0 4px}
@@ -225,6 +244,7 @@ table.bil td small{color:var(--repere)}
 <script src="qrcode.js"></script>
 <script src="scan.js"></script>
 <script src="prof.js"></script>
+<script src="prof-plus.js"></script>
 <script>if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});</script>
 </body>
 </html>

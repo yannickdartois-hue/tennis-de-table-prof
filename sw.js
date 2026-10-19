@@ -1,7 +1,7 @@
 /* Hors ligne : l'outil est gardé sur l'iPad après la 1re ouverture avec internet.
-   Après une modification, augmenter VERSION (ex. ttp-v1 → ttp-v2). */
-const VERSION='ttp-v1';
-const FICHIERS=['./','index.html','prof.js','donnees.js','logique.js','scan.js','jsqr.js','jszip.js','xlsx.js','qrcode.js','manifest.webmanifest',
+   Après une modification, augmenter VERSION (ex. ttp-v2 → ttp-v2). */
+const VERSION='ttp-v2';
+const FICHIERS=['./','index.html','prof.js','prof-plus.js','donnees.js','logique.js','scan.js','jsqr.js','jszip.js','xlsx.js','qrcode.js','manifest.webmanifest',
   'icon-32.png','icon-180.png','icon-192.png','icon-512.png','polices/archivo.woff2','polices/atkinson-400.woff2','polices/atkinson-700.woff2'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(VERSION).then(c=>c.addAll(FICHIERS)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==VERSION).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});

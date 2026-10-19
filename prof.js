@@ -10,6 +10,9 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const axe=k=>GA.axes.find(a=>a.k===k);
+// Séance 8, tour 2 de poule = « 8.2 » (le tour 1 garde le numéro de séance)
+const labS=x=>{x=+x;return Number.isInteger(x)?String(x):Math.floor(x)+' · tour '+Math.round((x%1)*10)};
+const labC=x=>{x=+x;return Number.isInteger(x)?'S'+x:'S'+Math.floor(x)+' T'+Math.round((x%1)*10)};
 const COURT={strat:'Stratégie',cont:'Continuité',diff:'Mettre en difficulté',eng:'Engagement',ana:'Analyse',coach:'Coach',arb:'Arbitrage'};
 function exInfo(n){for(const t of GA.themes){const e=t.ex.find(x=>x.n===String(n));if(e)return {t,e}}return null}
 function critere(n,c){const i=exInfo(n);if(!i)return '';const nv=i.e.nv||[],cols=nv.length===3?[2,3,4]:nv.length===2?[3,4]:[4];if(c===1)return 'pas encore atteint';const k=cols.indexOf(c);return k>=0?nv[k]:''}
@@ -37,7 +40,12 @@ function ajouterPoule(classe,seance,b,ts){
   const joues=x=>x.matchs.filter(m=>TTL.etatMatch(m,x.fmt).fini).length;
   const nv={classe,seance:+seance,num:+b.num,fmt:String(b.fmt||'2'),arbDisp:b.arbDisp||'',joueurs:b.joueurs.slice(),matchs:b.matchs.map(m=>({a:m.a,b:m.b,arb:m.arb,f:m.f||null,m:(m.m||[]).map(x=>[+x[0],+x[1]])})),ts:ts||0};
   if(old){
-    if(old.joueurs.map(norm).join('|')!==nv.joueurs.map(norm).join('|')){nv.conflit=true}
+    const sig=x=>x.joueurs.map(norm).join('|')+'#'+JSON.stringify(x.matchs.map(m=>[m.f,m.m]));
+    if(sig(old)!==sig(nv)&&old.joueurs.map(norm).join('|')!==nv.joueurs.map(norm).join('|')){
+      DB.poulesAlt=DB.poulesAlt||{};const L=DB.poulesAlt[id]||(DB.poulesAlt[id]=[]);
+      if(!L.some(x=>sig(x)===sig(nv)))L.push(nv);if(!L.some(x=>sig(x)===sig(old)))L.push(old);
+      if(old.choisi)return; // le prof a déjà tranché
+    }
     if(joues(old)>joues(nv)||(joues(old)===joues(nv)&&(old.ts||0)>=(nv.ts||0)))return;
   }
   DB.poules[id]=nv;
@@ -50,6 +58,7 @@ function importerObjet(o,source){
   const ts=Date.parse(o.exportedAt)/1000||0;
   if(o.poule&&o.poule.brut)ajouterPoule(o.classe,o.seance,o.poule.brut,ts);
   if(o.arbitrePoule&&o.arbitrePoule.brut)ajouterPoule(o.classe,o.seance,o.arbitrePoule.brut,ts);
+  (o.tours||[]).forEach(t=>{if(t&&t.brut)ajouterPoule(o.classe,o.seance+'.'+t.tour,t.brut,ts)});
   if(o.type==='poule')return 'poule '+(o.poule?o.poule.numero:'');
   const r={classe:o.classe||'',eleve:o.eleve,seance:+o.seance,date:o.date,ts,src:'fichier',
     axes:(o.axes||[]).map(a=>({k:a.axe,val:!!a.valideAujourdhui})),
@@ -105,7 +114,8 @@ function resultatsPoules(){
       const k=cleEleve(P.classe,j),c=C.find(x=>x.i===i);
       const ms=P.matchs.filter(m=>m.a===i||m.b===i).map(m=>{const e=TTL.etatMatch(m,P.fmt),cote=m.a===i?'a':'b';return {adv:P.joueurs[m.a===i?m.b:m.a],fini:e.fini,gagne:e.fini?e.w===cote:null,score:e.fini?TTL.texteScore(m,P.fmt,cote):''}});
       let mv='';const tous=P.matchs.every(m=>TTL.etatMatch(m,P.fmt).fini);
-      if(tous&&n>1){mv=c.rang===1&&P.num>1?'monte':c.rang===n?'descend':'reste'}
+      const der=Math.max(...poulesClasse().filter(q=>q.seance===P.seance).map(q=>q.num));
+      if(tous&&n>1){mv=c.rang===1&&P.num>1?'monte':c.rang===n&&P.num<der?'descend':'reste'}
       (R[k]=R[k]||{})[P.seance]={num:P.num,n,rang:c.rang,pts:c.pts,v:c.v,d:c.d,mg:c.mg,mp:c.mp,pg:c.pg,pp:c.pp,matchs:ms,mv,complet:tous,arb:P.matchs.filter(m=>m.arb===i).length};
     });
   });
@@ -141,9 +151,9 @@ const famCl=k=>{const a=axe(k);return a?{AFL1:'a1',AFL2:'a2',AFL3:'a3'}[a.afl]:'
 function rendre(){
   const C=classes();
   $('#classes').innerHTML=C.length?`<label class="small">Classe <select id="selClasse">${C.map(c=>`<option${c===DB.classe?' selected':''}>${esc(c||'(sans classe)')}</option>`).join('')}</select></label>`:'';
-  const O=[['classes','Classes'],['import','Importer'],['appel','Appel'],['tournoi','Tournoi'],['eleves','Élèves'],['export','Exporter']];
+  const O=[['classes','Classes'],['import','Importer'],['appel','Appel'],['tournoi','Tournoi'],['pilotage','Pilotage'],['eleves','Élèves'],['note','Note'],['export','Exporter']];
   $('#onglets').innerHTML=O.map(o=>`<button type="button" data-act="vue" data-v="${o[0]}" class="${DB.vue===o[0]?'ici':''}">${o[1]}</button>`).join('');
-  const V={classes:vClasses,appel:vAppel,import:vImport,tournoi:vTournoi,eleves:vEleves,export:vExport,fiche:vFiche};
+  const V={note:()=>window.vNote?vNote():'',pilotage:()=>window.vPilotage?vPilotage():'',classes:vClasses,appel:vAppel,import:vImport,tournoi:vTournoi,eleves:vEleves,export:vExport,fiche:vFiche};
   $('#main').innerHTML=V[DB.vue]();
 }
 function vImport(){
@@ -168,20 +178,21 @@ function vTournoi(){
   const R=resultatsPoules();
   const AR=arbitrages();
   const sansPoule=eleves().filter(k=>!(R[k]&&R[k][DB.seance])&&!(AR[k]&&AR[k][DB.seance])&&recsClasse().some(r=>r.k===k&&r.seance===DB.seance&&!r.disp));
-  return `<h2>Tournoi · séance ${DB.seance}</h2>
-  <div class="strip">${S.map(s=>`<button type="button" data-act="seance" data-v="${s}" class="${s===DB.seance?'ici':''}">${s}</button>`).join('')}</div>
+  return `<h2>Tournoi · séance ${labS(DB.seance)}</h2>
+  <div class="strip">${S.map(s=>`<button type="button" data-act="seance" data-v="${s}" class="${s===DB.seance?'ici':''}">${labS(s)}</button>`).join('')}</div>
   ${P.length?'':'<p class="muted">Aucune poule complète reçue pour cette séance.</p>'}
   <div class="poules">${P.map(p=>{const n=p.joueurs.length,C=TTL.classement(n,p.matchs,p.fmt),tous=p.matchs.every(m=>TTL.etatMatch(m,p.fmt).fini);
     return `<section class="carte"><h3>Poule ${p.num} <span class="small muted">· ${n} joueurs · ${p.fmt==='1'?'1 manche':p.fmt+' manches gagnantes'}</span></h3>
       ${p.arbDisp?`<p class="small">Arbitre : <b>${esc(p.arbDisp)}</b> (dispensé)</p>`:''}
-      ${p.conflit?'<p class="avert small">Deux versions différentes de cette poule ont été reçues : la plus complète est gardée.</p>':''}
+      ${(()=>{const id=norm(p.classe)+'|'+p.seance+'|'+p.num,L=(DB.poulesAlt||{})[id];if(!L||L.length<2)return '';
+        return `<div class="avert small">Versions différentes reçues pour cette poule${p.choisi?' (choix fait)':''} :<br>${L.map((x,i)=>`<button class="bt mini" type="button" data-act="version" data-id="${esc(id)}" data-v="${i}">${x.joueurs.map(esc).join(', ')}</button>`).join(' ')}</div>`})()}
       <table class="cl"><thead><tr><th>Rang</th><th>Joueur</th><th>Pts</th><th>V</th><th>D</th><th>Manches</th><th>Points</th><th></th></tr></thead><tbody>
-      ${C.map(c=>{const k=cleEleve(p.classe,p.joueurs[c.i]);const mv=tous&&n>1?(c.rang===1&&p.num>1?'↑':c.rang===n?'↓':''):'';
+      ${C.map(c=>{const k=cleEleve(p.classe,p.joueurs[c.i]);const der=Math.max(...P.map(q=>q.num));const mv=tous&&n>1?(c.rang===1&&p.num>1?'↑':c.rang===n&&p.num<der?'↓':''):'';
         return `<tr><td>${c.rang}</td><td><button class="lien" type="button" data-act="fiche" data-k="${esc(k)}">${esc(p.joueurs[c.i])}</button></td><td><b>${c.pts}</b></td><td>${c.v}</td><td>${c.d}</td><td>${c.mg}-${c.mp}</td><td>${c.pg}-${c.pp}</td><td class="mv">${mv}</td></tr>`}).join('')}</tbody></table>
       <details><summary class="small">Les ${p.matchs.length} matchs</summary><ul class="matchs">${p.matchs.map(m=>{const e=TTL.etatMatch(m,p.fmt);
         return `<li>${esc(p.joueurs[m.a])} – ${esc(p.joueurs[m.b])} : ${e.fini?`<b>${esc(TTL.texteScore(m,p.fmt,'a'))}</b>`:'<span class="muted">non joué</span>'}${m.arb!=null?` <span class="muted">· arb. ${esc(p.joueurs[m.arb])}</span>`:''}</li>`}).join('')}</ul></details></section>`}).join('')}</div>
   ${(()=>{const {rangs,nb}=rangsClasse(R);const L=Object.keys(rangs).filter(k=>rangs[k][DB.seance]).sort((a,b)=>rangs[a][DB.seance]-rangs[b][DB.seance]);
-    return L.length?`<section class="carte"><h3>Classement de la classe · séance ${DB.seance}</h3><p class="small muted">Poule 1 d’abord, puis le rang dans la poule.</p><div class="tablewrap"><table class="cl"><thead><tr><th>Classe</th><th>Élève</th><th>Poule</th><th>Rang poule</th><th>Pts</th><th>V-D</th></tr></thead><tbody>
+    return L.length?`<section class="carte"><h3>Classement de la classe · séance ${labS(DB.seance)}</h3><p class="small muted">Poule 1 d’abord, puis le rang dans la poule.</p><div class="tablewrap"><table class="cl"><thead><tr><th>Classe</th><th>Élève</th><th>Poule</th><th>Rang poule</th><th>Pts</th><th>V-D</th></tr></thead><tbody>
       ${L.map(k=>{const c=R[k][DB.seance];return `<tr><td><b>${rangs[k][DB.seance]}</b>/${nb[DB.seance]}</td><td>${esc(nomAffiche(k))}</td><td>${c.num}</td><td>${c.rang}/${c.n}</td><td>${c.pts}</td><td>${c.v}-${c.d}</td></tr>`}).join('')}</tbody></table></div></section>`:''})()}
   ${sansPoule.length?`<section class="carte"><h3>Sans poule reçue</h3><p class="small">${sansPoule.map(k=>esc(nomAffiche(k))).join(', ')}</p><p class="small muted">Leur poule n’a pas été envoyée (QR « Poule » ou fichier du téléphone qui a saisi les scores).</p></section>`:''}`;
 }
@@ -191,7 +202,7 @@ function vEleves(){
   if(DB.tri==='classement')L.sort((a,b)=>((CC[a]||{}).place||999)-((CC[b]||{}).place||999));
   return `<h2>Élèves · ${esc(DB.classe||'')}</h2><p class="small muted">Pour chaque séance : n° de poule, rang dans la poule et (rang dans la classe). Touche un nom pour voir sa fiche.</p>
   <div class="rangee" style="margin-bottom:8px"><span class="small">Trier par :</span><button class="bt mini${DB.tri!=='classement'?' noir':''}" type="button" data-act="tri" data-v="nom">Nom</button><button class="bt mini${DB.tri==='classement'?' noir':''}" type="button" data-act="tri" data-v="classement">Classement du cycle</button></div>
-  <div class="tablewrap"><table class="cl bil"><thead><tr><th>Élève</th><th>Classement</th><th>Rang classe moy.</th>${S.map(s=>`<th>S${s}</th>`).join('')}<th>Abs.</th><th>Disp.</th><th>Matchs</th><th>V</th><th>D</th><th>% V</th><th>Manches G-P</th><th>Points G-P</th><th>Poule moy.</th><th>Exos</th><th>Chgt axe</th></tr></thead><tbody>
+  <div class="tablewrap"><table class="cl bil"><thead><tr><th>Élève</th><th>Classement</th><th>Rang classe moy.</th>${S.map(s=>`<th>${labC(s)}</th>`).join('')}<th>Abs.</th><th>Disp.</th><th>Matchs</th><th>V</th><th>D</th><th>% V</th><th>Manches G-P</th><th>Points G-P</th><th>Poule moy.</th><th>Exos</th><th>Chgt axe</th></tr></thead><tbody>
   ${L.map(k=>{const t=bilanEleve(k,R),x=R[k]||{};const recs=new Set(recsClasse().filter(r=>r.k===k).map(r=>r.seance));
     const st=S.map(s=>statut(k,s,R,A).c),cc=CC[k];
     return `<tr><td><button class="lien" type="button" data-act="fiche" data-k="${esc(k)}">${esc(nomAffiche(k))}</button></td><td><b>${cc?cc.place:'–'}</b></td><td>${cc?String(cc.moy).replace('.',','):'–'}</td>${S.map((s,j)=>{const c=x[s];if(c)return `<td class="rg r${Math.min(c.rang,4)}">P${c.num}·${c.rang}/${c.n} <small>(${(RC[k]||{})[s]})</small></td>`;const v=st[j];return `<td class="${v==='rien'?'vide':''}">${v==='disp'?'Disp.':v==='absent'||v==='abj'?'Abs.':recs.has(s)?'✓':'–'}</td>`}).join('')}
@@ -207,14 +218,15 @@ function vFiche(){
   const S=[...new Set(Object.keys(x).map(Number).concat(recs.map(r=>r.seance)).concat(Object.keys(A[k]||{}).map(Number)))].sort((a,b)=>a-b);
   const autres=eleves().filter(e=>e!==k);
   const etoile=(r,lab)=>r?`<div><b>${lab} (séance ${r.seance})</b><div class="et">${GA.axes.map((a,i)=>`<span>${DOT(r.etoile[i]||0)} ${COURT[a.k]}</span>`).join('')}</div></div>`:'';
-  return `<button class="bt mini" type="button" data-act="vue" data-v="eleves">← Élèves</button>
+  return `<div class="rangee noprint"><button class="bt mini" type="button" data-act="vue" data-v="eleves">← Élèves</button><button class="bt mini" type="button" data-act="imprimer">Imprimer la fiche</button></div>
   <h2>${esc(nomAffiche(k))}</h2>
   <div class="chiffres"><div><b>${t.matchs}</b>matchs</div><div><b>${t.v}-${t.d}</b>V-D</div><div><b>${t.pctV==null?'–':t.pctV+'%'}</b>victoires</div><div><b>${t.complet?t.mg+'-'+t.mp:'–'}</b>manches</div><div><b>${t.complet?t.pg+'-'+t.pp:'–'}</b>points</div><div><b>${t.pouleMoy==null?'–':String(t.pouleMoy).replace('.',',')}</b>poule moy.</div><div><b>${CC?CC.place:'–'}</b>classement${CC?` (moy. ${String(CC.moy).replace('.',',')})`:''}</div></div>
+  ${window.PLUS&&PLUS.fiche?PLUS.fiche(k,R):''}
   ${t.etDebut?`<section class="carte"><h3>Étoile</h3>${etoile(t.etDebut,'Début')}${etoile(t.etFin,'Fin')}</section>`:''}
   ${t.mtValides.length?`<p><b>Matchs à thème validés :</b> ${t.mtValides.map(a=>`<span class="fam ${famCl(a)}">${esc(COURT[a]||a)}</span>`).join(' ')}</p>`:''}
   ${S.map(s=>{const p=x[s],r=recs.find(y=>y.seance===s);
-    const st=statut(k,s,R,A),ar=(A[k]||{})[s],rc=(RC.rangs[k]||{})[s];
-    return `<section class="carte"><h3>Séance ${s}${r&&r.date?` <span class="small muted">· ${new Date(r.date).toLocaleDateString('fr-FR')}</span>`:''} <span class="badge st-${st.c}">${STATUTS[st.c]}</span>${rc?` <span class="badge">${rc}e de la classe</span>`:''}</h3>
+    const st=statut(k,Math.floor(s),R,A),ar=(A[k]||{})[s],rc=(RC.rangs[k]||{})[s];
+    return `<section class="carte"><h3>Séance ${labS(s)}${r&&r.date?` <span class="small muted">· ${new Date(r.date).toLocaleDateString('fr-FR')}</span>`:''} <span class="badge st-${st.c}">${STATUTS[st.c]}</span>${rc?` <span class="badge">${rc}e de la classe</span>`:''}</h3>
     ${ar?`<p>Arbitre (dispensé) de la poule ${ar.num} : ${ar.matchs} match${ar.matchs>1?'s':''} arbitré${ar.matchs>1?'s':''}.</p>`:''}
     ${p?`<p><b>Poule ${p.num}</b> · rang ${p.rang}/${p.n} · ${p.pts} pts · ${p.v} V, ${p.d} D${p.mg!=null?` · manches ${p.mg}-${p.mp} · points ${p.pg}-${p.pp}`:''}${p.mv?` · <b>${p.mv}</b>`:''}${p.arb?` · ${p.arb} arbitrage${p.arb>1?'s':''}`:''}</p>
       ${p.matchs.length?`<ul class="matchs">${p.matchs.map(m=>`<li class="${m.gagne?'g':m.gagne===false?'p':''}">${m.gagne?'Gagné':m.gagne===false?'Perdu':'Non joué'} contre ${esc(m.adv)} ${m.score?`: ${esc(m.score)}`:''}</li>`).join('')}</ul>`:p.resume?'<p class="small muted">Résumé seulement (détail des matchs non reçu).</p>':''}`:''}
@@ -245,7 +257,7 @@ function statut(k,s,R,A){
   const r=DB.rec[k+'|'+s];
   if(r&&r.disp)return {c:'disp'};
   if(A[k]&&A[k][s])return {c:'disp'};
-  if(r||(R[k]&&R[k][s]))return {c:'present'};
+  if(r||(R[k]&&Object.keys(R[k]).some(x=>Math.floor(+x)===+s)))return {c:'present'};
   return {c:'rien'};
 }
 // Rang dans la classe à une séance : poule 1 d'abord, puis rang dans la poule (montante-descendante).
@@ -342,17 +354,18 @@ function vClasses(){
   <section class="carte"><h3>Fin d’année</h3><p class="small muted">Télécharge une sauvegarde complète, puis vide l’outil pour la rentrée suivante.</p><button class="bt mini danger" type="button" data-act="archiver">Archiver l’année et repartir à zéro</button></section>`;
 }
 function vAppel(){
-  const S=[...new Set(seancesClasse().concat([1,2,3,4,5,6,7,8,9]))].sort((a,b)=>a-b).filter(s=>s<=Math.max(9,...seancesClasse()));
+  const S=[...new Set(seancesClasse().map(Math.floor).concat([1,2,3,4,5,6,7,8,9]))].sort((a,b)=>a-b);
+  if(!Number.isInteger(DB.seance))DB.seance=Math.floor(DB.seance);
   const R=resultatsPoules(),A=arbitrages(),L=eleves(),inList=new Set(liste().map(n=>cleEleve(DB.classe,n)));
   if(!L.length)return `<h2>Appel</h2><p class="muted">Importe d’abord la liste de la classe (onglet Classes).</p>`;
   const st=L.map(k=>[k,statut(k,DB.seance,R,A)]);
   const cpt={};st.forEach(([,x])=>cpt[x.c]=(cpt[x.c]||0)+1);
   return `<h2>Appel · séance ${DB.seance}</h2>
-  <div class="strip">${S.map(s=>`<button type="button" data-act="seance" data-v="${s}" class="${s===DB.seance?'ici':''}">${s}</button>`).join('')}</div>
+  <div class="strip">${S.map(s=>`<button type="button" data-act="seance" data-v="${s}" class="${s===DB.seance?'ici':''}">${labS(s)}</button>`).join('')}</div>
   <p>${Object.entries(cpt).map(([c,n])=>`<span class="badge st-${c}">${STATUTS[c]} : ${n}</span>`).join(' ')}</p>
   ${seancesClasse().includes(DB.seance)?'':'<p class="muted small">Rien n’a encore été reçu pour cette séance.</p>'}
   <div class="tablewrap"><table class="cl"><thead><tr><th>Élève</th><th>Statut</th><th>Corriger</th></tr></thead><tbody>
-  ${st.map(([k,x])=>`<tr class="st-${x.c}"><td><button class="lien" type="button" data-act="fiche" data-k="${esc(k)}">${esc(nomAffiche(k))}</button>${inList.has(k)||!inList.size?'':' <span class="badge">hors liste</span>'}</td><td>${STATUTS[x.c]}${x.manuel?' <span class="small muted">(corrigé)</span>':''}</td>
+  ${st.map(([k,x])=>`<tr class="st-${x.c}"><td><button class="lien" type="button" data-act="fiche" data-k="${esc(k)}">${esc(nomAffiche(k))}</button>${inList.has(k)||!inList.size?'':' <span class="badge">hors liste</span>'+(window.PLUS&&PLUS.suggestion?PLUS.suggestion(k):'')}</td><td>${STATUTS[x.c]}${x.manuel?' <span class="small muted">(corrigé)</span>':''}</td>
     <td><select data-appel="${esc(k)}"><option value="">auto</option>${['present','disp','absent','abj','oubli'].map(c=>`<option value="${c}"${x.manuel&&x.c===c?' selected':''}>${STATUTS[c]}</option>`).join('')}</select></td></tr>`).join('')}
   </tbody></table></div>
   <p class="small muted">Auto : séance ou poule reçue = présent ; case « dispensé » cochée par l’élève (ou arbitre dispensé de poule) = dispensé ; rien = rien reçu. « Hors liste » : nom absent de la liste Pronote, à fusionner depuis sa fiche.</p>`;
@@ -397,6 +410,8 @@ document.addEventListener('click',e=>{
     case 'effacer':if(!confirm('Effacer toutes les données de l’outil sur cet appareil ? (Exporte d’abord une sauvegarde.)'))return;DB=vide();break;
     case 'csv':exporter(v);return;
     case 'tri':DB.tri=v;break;
+    case 'version':{const id=b.dataset.id,x=DB.poulesAlt[id][+v];DB.poules[id]=Object.assign({},x,{choisi:true});break}
+    case 'imprimer':window.print();return;
     case 'qrdem':qrDemarrage(v);return;
     case 'reprise':qrReprise(b.dataset.k);return;
     case 'clcoller':importerListe([],$('#cl-txt').value,$('#cl-nom').value.trim());return;
@@ -407,7 +422,7 @@ document.addEventListener('click',e=>{
     case 'fusionner':{const src=$('#fusion').value,dst=DB.eleve;if(!src)return;
       if(!confirm('Fusionner « '+nomAffiche(src)+' » dans « '+nomAffiche(dst)+' » ?'))return;
       DB.alias[src]=dst;Object.keys(DB.rec).forEach(id=>{const r=DB.rec[id];if(r.k===src){delete DB.rec[id];const nid=dst+'|'+r.seance;if(!DB.rec[nid]||(DB.rec[nid].ts||0)<(r.ts||0))DB.rec[nid]=Object.assign(r,{k:dst})}});break}
-    default:return;
+    default:if(window.PLUS&&PLUS.clic&&PLUS.clic(a,b,e)===false)return;if(!(window.PLUS&&PLUS.actions&&PLUS.actions.includes(a)))return;
   }
   sauver();rendre();
 });
@@ -417,6 +432,7 @@ document.addEventListener('change',async e=>{
   if(t.id==='fic'&&t.files.length){await importerFichiers([...t.files]);t.value=''}
   if(t.id==='cl-fic'&&t.files.length){try{await importerListe([...t.files],'',$('#cl-nom').value.trim())}catch(x){alert('Fichier illisible : '+(x.message||x))}t.value=''}
   if(t.classList&&t.classList.contains('cl-lien')){const c=t.dataset.cl,u=t.value.trim();if(u&&!/^https:\/\//.test(u)){alert('Le lien doit commencer par https://');return}DB.classesL[c].lien=u;sauver()}
+  if(window.PLUS&&PLUS.change&&PLUS.change(t))return;
   if(t.dataset&&t.dataset.appel!=null){const id=norm(DB.classe)+'|'+DB.seance+'|'+t.dataset.appel;if(t.value)DB.appel[id]=t.value;else delete DB.appel[id];sauver();rendre()}
   if(t.id==='resto'&&t.files[0]){try{const o=JSON.parse(await t.files[0].text());if(!o.ttProf)throw 0;if(!confirm('Remplacer les données de cet appareil par cette sauvegarde ?'))return;delete o.ttProf;DB=Object.assign(vide(),o);sauver();rendre()}catch(x){alert('Ce fichier n’est pas une sauvegarde de l’outil prof.')}}
 });
