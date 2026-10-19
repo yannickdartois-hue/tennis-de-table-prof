@@ -399,11 +399,15 @@ function groupesAppel(n){
   // dernier groupe connu de chaque élève avant cette séance
   const dernier={};recs.filter(r=>r.seance<n&&r.groupe).sort((a,b)=>a.seance-b.seance).forEach(r=>dernier[r.k]={noms:r.groupe,s:r.seance});
   const manq={};Object.entries(dernier).forEach(([k,g])=>{if(recu.has(k))return;const c=cleGroupe(g.noms);(manq[c]=manq[c]||{noms:g.noms,s:g.s,qui:[]}).qui.push(k)});
-  const E=Object.values(env),M=Object.values(manq);
-  if(!E.length&&!M.length)return '';
+  // joueurs présents en poule (saisie d'un autre groupe) mais dont la séance n'est pas arrivée
+  const aSeance=new Set(recs.filter(r=>Math.floor(r.seance)===n).map(r=>r.k)),pouleSeule={};
+  Object.entries(dernier).forEach(([k,g])=>{if(!recu.has(k)||aSeance.has(k))return;const c=cleGroupe(g.noms);(pouleSeule[c]=pouleSeule[c]||{noms:g.noms,qui:[]}).qui.push(k)});
+  const E=Object.values(env),M=Object.values(manq),PS=Object.values(pouleSeule);
+  if(!E.length&&!M.length&&!PS.length)return '';
   const heure=t=>t?new Date(t*1000).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';
   return `<section class="carte"><h3>Groupes · séance ${n}</h3>
     ${M.length?`<p style="color:var(--alerte)"><b>⚠ Rien reçu de :</b></p><ul>${M.map(g=>`<li><b>${g.qui.map(k=>esc(nomAffiche(k))).join(' · ')}</b> <span class="small muted">(groupe de la séance ${g.s} : ${g.noms.map(esc).join(', ')})</span></li>`).join('')}</ul><p class="small muted">Absents ou envoi oublié ? Le carnet reste sur leur tablette : il suffit de rouvrir la séance ${n} et d’envoyer.</p>`:''}
+    ${PS.length?`<p style="color:var(--alerte)"><b>⚠ Poule reçue, mais séance non envoyée :</b></p><ul>${PS.map(g=>`<li><b>${g.qui.map(k=>esc(nomAffiche(k))).join(' · ')}</b> <span class="small muted">(groupe : ${g.noms.map(esc).join(', ')})</span></li>`).join('')}</ul><p class="small muted">Leurs exercices et leur étoile sont restés sur leur tablette : demande-leur d’envoyer la séance ${n}.</p>`:''}
     ${E.length?`<p><b>✓ Ont envoyé :</b></p><ul class="small">${E.map(g=>`<li>${g.noms.map(esc).join(' · ')} — ${[...g.src].join(' + ')} ${heure(g.ts)}</li>`).join('')}</ul>`:''}</section>`;
 }
 

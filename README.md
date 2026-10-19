@@ -36,3 +36,8 @@ Bibliothèques : qrcode-generator (MIT), jsQR (Apache 2.0), JSZip (MIT), SheetJS
 - **Codes du coach** (0-3, x) relevés au tableau de marque : visibles dans la fiche élève et dans les aides de la note ; les matchs codés comme arbitre-coach comptent pour la suggestion AFL3.
 - **Copies de secours** (onglet Importer) : la clé est créée au premier « QR de démarrage » et rangée dans la sauvegarde de l'outil. Les fichiers `secours_….json` s'importent comme les autres ; « Télécharger le carnet » donne un fichier à reprendre sur une tablette (Mon groupe → Reprendre un carnet). Sans sauvegarde de l'outil, la clé et donc les copies sont perdues.
 - Bandeau « Nouvelle version » quand l'outil est mis à jour.
+
+## Mode démo (19/10/2026) — `prof-demo.js`
+Bouton « Découvrir avec une classe fictive » (onglets Importer et Classes), ou adresse `…/tennis-de-table-prof/?demo`. Classe « DÉMO » de 24 élèves, 8 séances (poules montantes-descendantes, 4 tours en séance 8, absents, un dispensé, un changement de groupe à la séance 5, un groupe qui n'a envoyé que sa poule en séance 6, codes du coach). Les vraies données restent en mémoire et ne sont pas touchées : en démo rien n'est enregistré ; import, sauvegarde, restauration et effacement sont bloqués. « Quitter la démo » revient aux vraies données.
+
+L'Appel signale aussi les élèves dont la **poule** est arrivée mais pas la **séance** (exercices et étoile restés sur la tablette).
