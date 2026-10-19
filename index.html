@@ -223,6 +223,9 @@ svg.radar2 .deb{fill:rgba(90,100,117,.15);stroke:#5A6475;stroke-width:2;stroke-d
 svg.radar2 .fin{fill:rgba(234,88,12,.18);stroke:#EA580C;stroke-width:3}
 .leg{display:inline-block;width:22px;height:0;border-top:3px solid #EA580C;vertical-align:middle}.leg.deb{border-top:3px dashed #5A6475}
 @media print{.noprint,#onglets,.barre #classes{display:none!important}body{background:#fff}.carte{break-inside:avoid;border-color:#bbb}select{appearance:none;border:0;background:none;padding:0}}
+.bandeau{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;background:var(--ligne-pale);color:var(--ligne-fonce);border-radius:12px;padding:10px 14px;margin:8px 0;font-weight:700;font-size:15px}
+.bandeau.rouge{background:var(--alerte-pale);color:var(--alerte)}
+.bandeau span{flex:1 1 260px}
 .qr-plein{position:fixed;inset:0;background:#fff;color:#14202e;z-index:50;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px}
 .qr-plein .qrbox svg{width:min(80vh,90vw);height:auto}
 .qr-plein h2{margin:0 0 4px}

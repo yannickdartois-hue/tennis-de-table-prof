@@ -5,6 +5,13 @@
 (function(root){
 'use strict';
 
+/* ---------- Projets de jeu annoncés avant un match (index partagé appli élève / outil prof) ---------- */
+const PROJETS=['Servir court, puis attaquer','Servir long, puis attaquer','Jouer sur le revers adverse','Jouer sur le coup droit adverse',
+  'Déplacer droite-gauche','Faire reculer, puis amortir','Tenir l’échange sans faute','Smasher la balle haute','Couper pour gêner','Lifter pour accélérer'];
+// Serveur au tableau de marque : changement tous les 2 points, puis à chaque point à partir de 10-10.
+function serveur(premier,a,b){const t=a+b,k=(a>=10&&b>=10)?10+(t-20):Math.floor(t/2);return k%2===0?premier:(premier==='a'?'b':'a')}
+function mancheFinie(a,b){return (a>=11||b>=11)&&Math.abs(a-b)>=2}
+
 /* ---------- Poules ---------- */
 // Ordre « tous contre tous » (méthode du cercle). Renvoie une liste de [i,j].
 function ordreMatchs(n){
@@ -105,8 +112,10 @@ function resumePoule(P,i){
     rang:me.rang,points:me.pts,victoires:me.v,defaites:me.d,manches:me.mg+'-'+me.mp,pointsMarques:me.pg+'-'+me.pp,
     termine:joues===total,mouvement,
     matchs:P.matchs.filter(m=>m.a===i||m.b===i).map(m=>{
-      const e=etatMatch(m,P.fmt),cote=m.a===i?'a':'b',adv=P.joueurs[m.a===i?m.b:m.a];
-      return {contre:adv,joue:e.fini,gagne:e.fini?e.w===cote:null,score:e.fini?texteScore(m,P.fmt,cote):''};
+      const e=etatMatch(m,P.fmt),cote=m.a===i?'a':'b',adv=P.joueurs[m.a===i?m.b:m.a],j=cote==='a'?0:1;
+      const pj=m.pj&&m.pj[j]!=null?m.pj[j]:null,ok=m.pjok&&m.pjok[j]!=null?m.pjok[j]:null;
+      return {contre:adv,joue:e.fini,gagne:e.fini?e.w===cote:null,score:e.fini?texteScore(m,P.fmt,cote):'',
+        projet:pj==null?null:PROJETS[pj],projetReussi:pj==null?null:ok};
     }),
     arbitrages:P.matchs.filter(m=>m.arb===i).length,
     classement:C.map(c=>({rang:c.rang,joueur:P.joueurs[c.i],points:c.pts,v:c.v,d:c.d}))
@@ -130,7 +139,7 @@ function versQR(o){
   else{
     q.x=(o.axes||[]).map(a=>[a.axe,a.valideAujourdhui?1:0]);
     if(o.changementsAxe&&o.changementsAxe.length)q.ch=o.changementsAxe.map(c=>[c.de,c.vers,cut(c.motif,40)]);
-    q.ex=(o.exercices||[]).map(e=>[e.axe,e.exercice,e.niveau||0,cut(e.remarque,60)]);
+    q.ex=(o.exercices||[]).map(e=>[e.axe,e.exercice,e.niveau||0,cut(e.remarque,60),cut(e.verifiePar||'',30)]);
     if(o.bilan)q.b=cut(o.bilan,150);
     if(o.dispense)q.dp=1;
     if(o.arbitrePoule)q.ap=[o.arbitrePoule.numero,o.arbitrePoule.matchs];
@@ -153,5 +162,5 @@ async function chaineQR(o){
   return 'TTE0:'+b64url(raw);
 }
 
-root.TTL={ordreMatchs,creerMatchs,etatMatch,classement,texteScore,resumePoule,nomFichier,slug,versQR,chaineQR};
+root.TTL={PROJETS,serveur,mancheFinie,ordreMatchs,creerMatchs,etatMatch,classement,texteScore,resumePoule,nomFichier,slug,versQR,chaineQR};
 })(typeof window!=='undefined'?window:globalThis);

@@ -62,7 +62,11 @@ function indicateurs(k,R){
   const Ss=[...new Set(seancesClasse().map(Math.floor))];
   const A=arbitrages();
   const recues=Ss.filter(s=>recsClasse().some(r=>r.k===k&&r.seance===s)||Object.keys(R[k]||{}).some(x=>Math.floor(+x)===s)).length;
-  const ex=recs.flatMap(r=>r.ex.filter(e=>e.niv)), hauts=ex.filter(e=>e.niv>=3).length;
+  const ex=recs.flatMap(r=>r.ex.filter(e=>e.niv)), hauts=ex.filter(e=>e.niv>=3).length, hautsV=ex.filter(e=>e.niv>=3&&e.obs).length;
+  // validations faites pour les autres (rôle d'observateur, AFL3)
+  const moi=norm(nomAffiche(k)),valid=recsClasse().reduce((a,r)=>a+r.ex.filter(e=>e.obs&&norm(e.obs)===moi).length,0);
+  // projets de jeu annoncés en match (choix tactiques)
+  const pjs=Object.values(R[k]||{}).flatMap(c=>c.matchs.filter(m=>m.pj!=null&&m.fini)),pjOk=pjs.filter(m=>m.pjok===true).length,pjDiff=new Set(pjs.map(m=>m.pj)).size;
   const mt=new Set(recs.flatMap(r=>r.axes.filter(a=>a.val).map(a=>a.k)));
   const chg=recs.reduce((a,r)=>a+r.chg.length,0);
   const arb=Object.values(R[k]||{}).reduce((a,c)=>a+(c.arb||0),0)+Object.values(A[k]||{}).reduce((a,c)=>a+c.matchs,0);
@@ -70,7 +74,7 @@ function indicateurs(k,R){
   // étoile : moyenne des axes AFL1 (début → fin)
   const et=recs.filter(r=>r.etoile&&r.etoile.some(Boolean));
   const moyAFL1=e=>{const v=e.slice(0,3).filter(Boolean);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null};
-  return {seances:Ss.length,recues,ex:ex.length,hauts,mt:mt.size,chg,arb,roles:roles.length,
+  return {seances:Ss.length,recues,ex:ex.length,hauts,hautsV,valid,pj:pjs.length,pjOk,pjDiff,mt:mt.size,chg,arb,roles:roles.length,
     etDeb:et.length?moyAFL1(et[0].etoile):null,etFin:et.length>1?moyAFL1(et[et.length-1].etoile):null};
 }
 function suggestionAFL2(I){
@@ -80,7 +84,9 @@ function suggestionAFL2(I){
   if(t>=.9&&I.mt>=2&&I.chg===0)return 4;
   return I.mt>=1?3:2;
 }
-function suggestionAFL3(I){if(!I.arb&&!I.roles)return 1;if(!I.roles)return 2;return I.roles>=2&&I.arb>=4?4:3}
+function suggestionAFL3(I){const r=I.roles+(I.valid>=3?1:0);if(!I.arb&&!r)return 1;if(!r)return 2;return r>=2&&I.arb>=4?4:3}
+// Choix tactiques : projets annoncés avant les matchs et réalisés
+function suggestionTactique(I){if(!I.pj)return 1;const t=I.pjOk/I.pj;if(t<.5)return 2;return t>=2/3&&I.pjDiff>=3?4:(I.pjDiff>=2?3:2)}
 // Alerte : auto-évaluation haute alors que les résultats en match sont faibles
 function alertes(k,R,I){
   const L=[],CC=classementCycle(R)[k],n=Object.keys(classementCycle(R)).length;
@@ -88,6 +94,7 @@ function alertes(k,R,I){
   if(basTiers&&I.ex>=3&&I.hauts/I.ex>=.7)L.push('Niveaux d’exercices très hauts (vert) mais classement dans le dernier tiers : à vérifier en observant.');
   if(basTiers&&I.etFin!=null?I.etFin>=3:basTiers&&I.etDeb!=null&&I.etDeb>=3)L.push('Étoile AFL1 « bien maîtrisé » ou plus, mais classement dans le dernier tiers.');
   if(I.chg>=2)L.push(I.chg+' changements d’axe sans match à thème validé.');
+  if(I.hauts>=3&&I.hautsV/I.hauts<.3)L.push('Niveaux verts rarement vérifiés par un observateur ('+I.hautsV+' sur '+I.hauts+').');
   return L;
 }
 
@@ -123,12 +130,12 @@ function vNote(){
     return `<tr><td><button class="lien" type="button" data-act="fiche" data-k="${esc(k)}">${esc(nomAffiche(k))}</button>${A.length?` <span class="badge st-oubli" title="${esc(A.join(' '))}">⚠</span>`:''}</td>
       <td><select class="nsel" data-note="rep" data-k="${esc(k)}">${Object.keys(REPS).map(r=>`<option${(e.rep||'4/4')===r?' selected':''}>${r}</option>`).join('')}</select></td>
       <td>${selDegres('tech',k,T?4:5,e.tech)}</td>
-      <td>${T?selDegres('serv',k,4,e.serv)+`<br><input class="pct" type="number" min="0" max="100" data-note="servPct" data-k="${esc(k)}" value="${e.servPct==null?'':e.servPct}" placeholder="% 3 frappes" title="Part des points de service gagnés en 3 frappes (relevé de l’observateur)">`:selDegres('tact',k,2,e.tact)}</td>
+      <td>${T?selDegres('serv',k,4,e.serv)+`<br><input class="pct" type="number" min="0" max="100" data-note="servPct" data-k="${esc(k)}" value="${e.servPct==null?'':e.servPct}" placeholder="% 3 frappes" title="Part des points de service gagnés en 3 frappes (relevé de l’observateur)">`:selDegres('tact',k,2,e.tact)}<div class="small muted">${I.pj?`projets ${I.pjOk}/${I.pj} réalisés · ${I.pjDiff} différent${I.pjDiff>1?'s':''}`:'aucun projet annoncé'}${T?'':` · suggestion D${suggestionTactique(I)}`}</div></td>
       <td><b>${fr(N.res.note)}</b><div class="small muted">${det}</div></td>
       <td>${selDegres('afl2',k,N.rep[0],e.afl2)}<div class="small muted">sur ${N.rep[0]} · suggestion D${suggestionAFL2(I)}</div></td>
       <td>${selDegres('afl3',k,N.rep[1],e.afl3)}<div class="small muted">sur ${N.rep[1]} · suggestion D${suggestionAFL3(I)}</div></td>
       <td><b class="tot">${fr(N.tot)}</b></td>
-      <td class="small aides">${I.recues}/${I.seances} séances · ${I.hauts}/${I.ex} exos vert · ${I.mt} MT validé${I.mt>1?'s':''} · ${I.chg} chgt axe · ${I.arb} arbitrage${I.arb>1?'s':''}${I.etDeb!=null?` · étoile AFL1 ${fr(I.etDeb)}${I.etFin!=null?'→'+fr(I.etFin):''}`:''}${A.length?`<div class="alerte">${A.map(esc).join('<br>')}</div>`:''}</td></tr>`}).join('')}
+      <td class="small aides">${I.recues}/${I.seances} séances · ${I.hauts}/${I.ex} exos vert (${I.hautsV} vérifiés) · ${I.valid} validation${I.valid>1?'s':''} faite${I.valid>1?'s':''} · ${I.mt} MT validé${I.mt>1?'s':''} · ${I.chg} chgt axe · ${I.arb} arbitrage${I.arb>1?'s':''}${I.etDeb!=null?` · étoile AFL1 ${fr(I.etDeb)}${I.etFin!=null?'→'+fr(I.etFin):''}`:''}${A.length?`<div class="alerte">${A.map(esc).join('<br>')}</div>`:''}</td></tr>`}).join('')}
   </tbody></table></div>
   <p class="small muted">Technique, ${T?'service':'tactique'}, AFL2 et AFL3 : c’est toi qui choisis le degré et la note ; les « suggestions » et les aides viennent des séances reçues (assiduité, exercices, matchs à thème, arbitrages) et ne sont qu’un repère. ${T?'Service : seuils 15 / 25 / 35 % des points de service gagnés en 3 frappes, encore à vérifier en S6.':''}</p>
   <div class="rangee noprint"><button class="bt orange" type="button" data-act="csvnote">Exporter les notes (CSV)</button><button class="bt" type="button" data-act="imprimer">Imprimer</button></div>`;

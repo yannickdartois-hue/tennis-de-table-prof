@@ -38,7 +38,7 @@ function ajouterPoule(classe,seance,b,ts){
   if(!b||!b.joueurs||!b.matchs)return;
   const id=norm(classe)+'|'+seance+'|'+b.num,old=DB.poules[id];
   const joues=x=>x.matchs.filter(m=>TTL.etatMatch(m,x.fmt).fini).length;
-  const nv={classe,seance:+seance,num:+b.num,fmt:String(b.fmt||'2'),arbDisp:b.arbDisp||'',joueurs:b.joueurs.slice(),matchs:b.matchs.map(m=>({a:m.a,b:m.b,arb:m.arb,f:m.f||null,m:(m.m||[]).map(x=>[+x[0],+x[1]])})),ts:ts||0};
+  const nv={classe,seance:+seance,num:+b.num,fmt:String(b.fmt||'2'),arbDisp:b.arbDisp||'',joueurs:b.joueurs.slice(),matchs:b.matchs.map(m=>({a:m.a,b:m.b,arb:m.arb,f:m.f||null,pj:m.pj||null,pjok:m.pjok||null,m:(m.m||[]).map(x=>[+x[0],+x[1]])})),ts:ts||0};
   if(old){
     const sig=x=>x.joueurs.map(norm).join('|')+'#'+JSON.stringify(x.matchs.map(m=>[m.f,m.m]));
     if(sig(old)!==sig(nv)&&old.joueurs.map(norm).join('|')!==nv.joueurs.map(norm).join('|')){
@@ -63,7 +63,7 @@ function importerObjet(o,source){
   const r={classe:o.classe||'',eleve:o.eleve,seance:+o.seance,date:o.date,ts,src:'fichier',
     axes:(o.axes||[]).map(a=>({k:a.axe,val:!!a.valideAujourdhui})),
     chg:(o.changementsAxe||[]).map(c=>({de:c.de,vers:c.vers,motif:c.motif})),
-    ex:(o.exercices||[]).map(e=>({axe:e.axe,n:String(e.exercice),niv:e.niveau||0,rq:e.remarque||''})),
+    ex:(o.exercices||[]).map(e=>({axe:e.axe,n:String(e.exercice),niv:e.niveau||0,rq:e.remarque||'',obs:e.verifiePar||''})),
     bilan:o.bilan||'',disp:!!o.dispense,etoile:o.etoile?o.etoile.map(a=>a.degre||0):null,
     grille:o.grilleCoach||null,
     pouleResume:o.poule?{num:o.poule.numero,n:o.poule.nbJoueurs,rang:o.poule.rang,pts:o.poule.points,v:o.poule.victoires,d:o.poule.defaites,mv:o.poule.mouvement||''}:null};
@@ -73,12 +73,12 @@ function importerObjet(o,source){
 function importerQR(q){
   const ts=q.ts||Date.parse(q.d)/1000||0;
   if(q.t==='T')throw new Error('C’est un QR de changement de groupe (pour un téléphone élève).');
-  if(q.t==='P'){const pp=q.p.length>=5?q.p:[q.p[0],q.p[1],q.p[2],'',q.p[3]];const [num,fmt,joueurs,arbDisp,ms]=pp;ajouterPoule(q.c,q.s,{num,fmt,joueurs,arbDisp,matchs:ms.map(([a,b,arb,f,sets])=>({a,b,arb,f:f||null,m:sets}))},ts);return 'Poule '+num+' · séance '+q.s}
+  if(q.t==='P'){const pp=q.p.length>=5?q.p:[q.p[0],q.p[1],q.p[2],'',q.p[3]];const [num,fmt,joueurs,arbDisp,ms]=pp;ajouterPoule(q.c,q.s,{num,fmt,joueurs,arbDisp,matchs:ms.map(([a,b,arb,f,sets,pj,pjok])=>({a,b,arb,f:f||null,m:sets,pj:pj||null,pjok:pjok||null}))},ts);return 'Poule '+num+' · séance '+q.s}
   if(q.t==='p')return q.e+' : poule seulement';
   const r={classe:q.c||'',eleve:q.e,seance:+q.s,date:q.d,ts,src:'qr',
     axes:(q.x||[]).map(([k,v])=>({k,val:!!v})),
     chg:(q.ch||[]).map(([de,vers,motif])=>({de,vers,motif})),
-    ex:(q.ex||[]).map(([a,n,niv,rq])=>({axe:a,n:String(n),niv:niv||0,rq:rq||''})),
+    ex:(q.ex||[]).map(([a,n,niv,rq,obs])=>({axe:a,n:String(n),niv:niv||0,rq:rq||'',obs:obs||''})),
     bilan:q.b||'',disp:!!q.dp,etoile:q.et||null,
     grille:q.g?{c0:q.g[0],c1:q.g[1],c2:q.g[2],c3:q.g[3],cx:q.g[4],projet:q.pj||'',scoreObserve:q.g[1]+2*q.g[2]+3*q.g[3]}:null,
     pouleResume:q.p?{num:q.p[0],n:q.p[1],rang:q.p[2],pts:q.p[3],mv:q.p[5]||'',v:(q.p[6]||[]).filter(m=>m[1]===1).length,d:(q.p[6]||[]).filter(m=>m[1]===0).length}:null};
@@ -95,7 +95,7 @@ async function importerFichiers(files){
     else err.push(f.name+' : ni .json ni .zip');
   }
   journal(ok+' fichier'+(ok>1?'s':'')+' importé'+(ok>1?'s':'')+(err.length?' · '+err.length+' refusé'+(err.length>1?'s':''):''),err);
-  choisirClasseParDefaut();sauver();rendre();
+  choisirClasseParDefaut();sauver();rendre();if(ok)proposerSauvegarde();
 }
 function journal(t,err){DB.journal.unshift({t,err:err||[],d:new Date().toISOString()});DB.journal=DB.journal.slice(0,20)}
 function classes(){const s=new Set(Object.keys(DB.classesL));Object.values(DB.rec).forEach(r=>s.add(r.classe||''));Object.values(DB.poules).forEach(p=>s.add(p.classe||''));return [...s].sort()}
@@ -112,7 +112,7 @@ function resultatsPoules(){
     const n=P.joueurs.length,C=TTL.classement(n,P.matchs,P.fmt);
     P.joueurs.forEach((j,i)=>{
       const k=cleEleve(P.classe,j),c=C.find(x=>x.i===i);
-      const ms=P.matchs.filter(m=>m.a===i||m.b===i).map(m=>{const e=TTL.etatMatch(m,P.fmt),cote=m.a===i?'a':'b';return {adv:P.joueurs[m.a===i?m.b:m.a],fini:e.fini,gagne:e.fini?e.w===cote:null,score:e.fini?TTL.texteScore(m,P.fmt,cote):''}});
+      const ms=P.matchs.filter(m=>m.a===i||m.b===i).map(m=>{const e=TTL.etatMatch(m,P.fmt),cote=m.a===i?'a':'b';const j=cote==='a'?0:1,pj=m.pj&&m.pj[j]!=null?m.pj[j]:null;return {adv:P.joueurs[m.a===i?m.b:m.a],fini:e.fini,gagne:e.fini?e.w===cote:null,score:e.fini?TTL.texteScore(m,P.fmt,cote):'',pj,pjok:pj==null?null:(m.pjok?m.pjok[j]:null)}});
       let mv='';const tous=P.matchs.every(m=>TTL.etatMatch(m,P.fmt).fini);
       const der=Math.max(...poulesClasse().filter(q=>q.seance===P.seance).map(q=>q.num));
       if(tous&&n>1){mv=c.rang===1&&P.num>1?'monte':c.rang===n&&P.num<der?'descend':'reste'}
@@ -145,6 +145,21 @@ function bilanEleve(k,R){
   return t;
 }
 
+/* ---------- Protection des données ---------- */
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+const installee=()=>{try{return navigator.standalone===true||matchMedia('(display-mode: standalone)').matches}catch(e){return false}};
+function sauvegarder(){DB.saveAt=Date.now();sauver();telecharger('TT_prof_sauvegarde_'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(Object.assign({ttProf:1},DB)),'application/json')}
+// Après un import : propose une sauvegarde si la dernière date de plus d'un jour.
+function proposerSauvegarde(){if(Date.now()-(DB.saveAt||0)>864e5&&confirm('Données importées. Enregistrer une sauvegarde maintenant ? (La dernière date de plus d’un jour.)'))sauvegarder()}
+function bandeauSauvegarde(){
+  if(!Object.keys(DB.rec).length&&!Object.keys(DB.poules).length)return '';
+  const j=DB.saveAt?Math.floor((Date.now()-DB.saveAt)/864e5):null;
+  const msg=j==null?'Aucune sauvegarde : si l’iPad efface les données, tout est perdu.':j>=7?`Dernière sauvegarde il y a ${j} jours.`:j>=2?`Dernière sauvegarde il y a ${j} jours.`:'';
+  const inst=installee()?'':'<span>Installe l’outil sur l’écran d’accueil (Safari → Partager → « Sur l’écran d’accueil ») : sinon Safari peut effacer ses données après 7 jours sans ouverture.</span>';
+  if(!msg&&!inst)return '';
+  return `<div class="bandeau${j==null||j>=7?' rouge':''} noprint">${msg?`<span>${msg}</span><button class="bt mini noir" type="button" data-act="sauvegarde">Sauvegarder maintenant</button>`:''}${inst}</div>`;
+}
+
 /* ---------- Affichage ---------- */
 const DOT=c=>`<i class="dot p${c}" title="${esc(GA.deg[c-1]||'')}"></i>`;
 const famCl=k=>{const a=axe(k);return a?{AFL1:'a1',AFL2:'a2',AFL3:'a3'}[a.afl]:''};
@@ -154,7 +169,7 @@ function rendre(){
   const O=[['classes','Classes'],['import','Importer'],['appel','Appel'],['tournoi','Tournoi'],['pilotage','Pilotage'],['eleves','Élèves'],['note','Note'],['export','Exporter']];
   $('#onglets').innerHTML=O.map(o=>`<button type="button" data-act="vue" data-v="${o[0]}" class="${DB.vue===o[0]?'ici':''}">${o[1]}</button>`).join('');
   const V={note:()=>window.vNote?vNote():'',pilotage:()=>window.vPilotage?vPilotage():'',classes:vClasses,appel:vAppel,import:vImport,tournoi:vTournoi,eleves:vEleves,export:vExport,fiche:vFiche};
-  $('#main').innerHTML=V[DB.vue]();
+  $('#main').innerHTML=bandeauSauvegarde()+V[DB.vue]();
 }
 function vImport(){
   const nR=Object.keys(DB.rec).length,nP=Object.keys(DB.poules).length;
@@ -229,9 +244,9 @@ function vFiche(){
     return `<section class="carte"><h3>Séance ${labS(s)}${r&&r.date?` <span class="small muted">· ${new Date(r.date).toLocaleDateString('fr-FR')}</span>`:''} <span class="badge st-${st.c}">${STATUTS[st.c]}</span>${rc?` <span class="badge">${rc}e de la classe</span>`:''}</h3>
     ${ar?`<p>Arbitre (dispensé) de la poule ${ar.num} : ${ar.matchs} match${ar.matchs>1?'s':''} arbitré${ar.matchs>1?'s':''}.</p>`:''}
     ${p?`<p><b>Poule ${p.num}</b> · rang ${p.rang}/${p.n} · ${p.pts} pts · ${p.v} V, ${p.d} D${p.mg!=null?` · manches ${p.mg}-${p.mp} · points ${p.pg}-${p.pp}`:''}${p.mv?` · <b>${p.mv}</b>`:''}${p.arb?` · ${p.arb} arbitrage${p.arb>1?'s':''}`:''}</p>
-      ${p.matchs.length?`<ul class="matchs">${p.matchs.map(m=>`<li class="${m.gagne?'g':m.gagne===false?'p':''}">${m.gagne?'Gagné':m.gagne===false?'Perdu':'Non joué'} contre ${esc(m.adv)} ${m.score?`: ${esc(m.score)}`:''}</li>`).join('')}</ul>`:p.resume?'<p class="small muted">Résumé seulement (détail des matchs non reçu).</p>':''}`:''}
+      ${p.matchs.length?`<ul class="matchs">${p.matchs.map(m=>`<li class="${m.gagne?'g':m.gagne===false?'p':''}">${m.gagne?'Gagné':m.gagne===false?'Perdu':'Non joué'} contre ${esc(m.adv)} ${m.score?`: ${esc(m.score)}`:''}${m.pj!=null?` <span class="small">· projet « ${esc(TTL.PROJETS[m.pj])} »${m.pjok===true?' ✓ réalisé':m.pjok===false?' ✗ non réalisé':''}</span>`:''}</li>`).join('')}</ul>`:p.resume?'<p class="small muted">Résumé seulement (détail des matchs non reçu).</p>':''}`:''}
     ${r?`<div class="travail">${r.axes.map(a=>`<span class="fam ${famCl(a.k)}">${esc(COURT[a.k]||a.k)}${a.val?' ✓ validé':''}</span>`).join(' ')}
-      ${r.ex.length?`<ul>${r.ex.map(e=>{const i=exInfo(e.n);return `<li>${e.niv?DOT(e.niv):'<i class="dot"></i>'} Ex. ${esc(e.n)}${i?' · '+esc(i.e.t):''}${e.niv?` <span class="small muted">— ${esc(critere(e.n,e.niv))}</span>`:''}${e.rq?` <i>« ${esc(e.rq)} »</i>`:''}</li>`}).join('')}</ul>`:''}
+      ${r.ex.length?`<ul>${r.ex.map(e=>{const i=exInfo(e.n);return `<li>${e.niv?DOT(e.niv):'<i class="dot"></i>'} Ex. ${esc(e.n)}${i?' · '+esc(i.e.t):''}${e.niv?` <span class="small muted">— ${esc(critere(e.n,e.niv))}</span>${e.obs?` <span class="badge st-present">vérifié par ${esc(e.obs)}</span>`:' <span class="badge">non vérifié</span>'}`:''}${e.rq?` <i>« ${esc(e.rq)} »</i>`:''}</li>`}).join('')}</ul>`:''}
       ${r.chg.map(c=>`<p class="avert small">Changement d’axe non validé : ${esc(COURT[c.de]||c.de)} → ${esc(COURT[c.vers]||c.vers||'aucun')} · « ${esc(c.motif)} »</p>`).join('')}
       ${r.grille?`<p class="small">Grille du coach : score observé ${r.grille.scoreObserve}${r.grille.projet?` · projet : « ${esc(r.grille.projet)} »`:''}</p>`:''}
       ${r.bilan?`<p class="small"><b>Bilan :</b> ${esc(r.bilan)}</p>`:''}</div>`:''}</section>`}).join('')}
@@ -405,8 +420,8 @@ document.addEventListener('click',e=>{
     case 'vue':DB.vue=v;break;
     case 'seance':DB.seance=+v;break;
     case 'fiche':DB.eleve=b.dataset.k;DB.vue='fiche';window.scrollTo(0,0);break;
-    case 'scanner':{let n0=0;TTQR.scanner(async t=>{const q=await TTQR.decoder(t);const r=importerQR(q);n0++;sauver();return '✓ '+r},{continu:true,titre:'QR codes des élèves',aide:'Montre les QR un par un devant la caméra.',onClose:n=>{if(n)journal(n+' QR code'+(n>1?'s':'')+' scanné'+(n>1?'s':''));choisirClasseParDefaut();sauver();rendre()}});return}
-    case 'sauvegarde':telecharger('TT_prof_sauvegarde_'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(Object.assign({ttProf:1},DB)),'application/json');return;
+    case 'scanner':{let n0=0;TTQR.scanner(async t=>{const q=await TTQR.decoder(t);const r=importerQR(q);n0++;sauver();return '✓ '+r},{continu:true,titre:'QR codes des élèves',aide:'Montre les QR un par un devant la caméra.',onClose:n=>{if(n)journal(n+' QR code'+(n>1?'s':'')+' scanné'+(n>1?'s':''));choisirClasseParDefaut();sauver();rendre();if(n)proposerSauvegarde()}});return}
+    case 'sauvegarde':DB.saveAt=Date.now();sauver();telecharger('TT_prof_sauvegarde_'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(Object.assign({ttProf:1},DB)),'application/json');return;
     case 'effacer':if(!confirm('Effacer toutes les données de l’outil sur cet appareil ? (Exporte d’abord une sauvegarde.)'))return;DB=vide();break;
     case 'csv':exporter(v);return;
     case 'tri':DB.tri=v;break;

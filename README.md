@@ -26,3 +26,7 @@ Bibliothèques : qrcode-generator (MIT), jsQR (Apache 2.0), JSZip (MIT), SheetJS
 - **Fiche élève** : courbe du rang dans la classe, étoile de début et de fin superposées, impression.
 - **Fiabilité** : deux versions différentes d'une même poule → choix manuel ; nom hors liste → fusion proposée avec le nom le plus proche de la liste Pronote.
 - **Tours** : séance 8, tour 2 = « 8.2 » (l'appli élève gère jusqu'à 4 tours par séance).
+
+## Sauvegarde, observateur, projets (19/10/2026)
+- Bandeau de sauvegarde (rouge sans sauvegarde ou au-delà de 7 jours), proposition de sauvegarde après chaque import, stockage persistant demandé au navigateur, invitation à installer l'outil sur l'écran d'accueil (sinon Safari peut effacer les données après 7 jours sans ouverture).
+- Note : niveaux verts « vérifiés » par un observateur, validations faites pour les autres (AFL3), projets de jeu annoncés et réalisés (aide et suggestion pour « choix tactiques »), alerte si les niveaux verts sont rarement vérifiés.
