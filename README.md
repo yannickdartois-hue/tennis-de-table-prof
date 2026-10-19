@@ -41,3 +41,6 @@ Bibliothèques : qrcode-generator (MIT), jsQR (Apache 2.0), JSZip (MIT), SheetJS
 Bouton « Découvrir avec une classe fictive » (onglets Importer et Classes), ou adresse `…/tennis-de-table-prof/?demo`. Classe « DÉMO » de 24 élèves, 8 séances (poules montantes-descendantes, 4 tours en séance 8, absents, un dispensé, un changement de groupe à la séance 5, un groupe qui n'a envoyé que sa poule en séance 6, codes du coach). Les vraies données restent en mémoire et ne sont pas touchées : en démo rien n'est enregistré ; import, sauvegarde, restauration et effacement sont bloqués. « Quitter la démo » revient aux vraies données.
 
 L'Appel signale aussi les élèves dont la **poule** est arrivée mais pas la **séance** (exercices et étoile restés sur la tablette).
+
+## Poules du jour (19/10/2026) — `prof-poules.js`
+Pilotage → « Poules du jour » : proposition à partir d'une séance (1er monte, dernier descend) ou du classement de la classe, modifiable le jour même (absent, dispensé, ↑/↓ d'une poule, arbitre dispensé, rééquilibrage 3 à 5, séance, tour, format). Un QR par poule (`t:'Q'`), affichable table par table ou imprimable sur une feuille. L'appli élève le scanne (Poule → « Scanner le QR de la poule ») : le formulaire se remplit et reste modifiable.

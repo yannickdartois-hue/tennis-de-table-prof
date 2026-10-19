@@ -72,6 +72,8 @@ function importerObjet(o,source){
 // QR code (format compact)
 function importerQR(q){
   const ts=q.ts||Date.parse(q.d)/1000||0;
+  if(q.t==='Q')throw new Error('C’est un QR de poule (à scanner par la tablette de la table).');
+  if(q.t==='C')throw new Error('C’est le QR de démarrage de la classe (pour les tablettes).');
   if(q.t==='T')throw new Error('C’est un QR de changement de groupe (pour un téléphone élève).');
   if(q.t==='P'){const pp=q.p.length>=5?q.p:[q.p[0],q.p[1],q.p[2],'',q.p[3]];const [num,fmt,joueurs,arbDisp,ms]=pp;ajouterPoule(q.c,q.s,{num,fmt,joueurs,arbDisp,matchs:ms.map(([a,b,arb,f,sets,pj,pjok,co])=>({a,b,arb,f:f||null,m:sets,pj:pj||null,pjok:pjok||null,co:co?{a:co[0],b:co[1]}:null}))},ts);return 'Poule '+num+' · séance '+q.s}
   if(q.t==='p')return q.e+' : poule seulement';
