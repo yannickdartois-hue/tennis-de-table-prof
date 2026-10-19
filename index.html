@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#EA580C">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TT Prof">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-32.png">
+<title>Tennis de table · Prof</title>
+<style>
+@font-face{font-family:"Archivo";src:url(polices/archivo.woff2) format("woff2");font-weight:100 900;font-stretch:62% 125%;font-display:swap}
+@font-face{font-family:"Atkinson";src:url(polices/atkinson-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Atkinson";src:url(polices/atkinson-700.woff2) format("woff2");font-weight:700;font-display:swap}
+/* Charte des applis de cycle (ecran.css) + couleurs GAREEPS d'origine */
+:root{--sol:#ECEFEE;--craie:#FFFFFF;--encre:#172033;--repere:#5A6475;--trait:#D5DBDD;--sur-encre:#FFFFFF;
+  --ligne:#EA580C;--ligne-fonce:#9A3412;--ligne-pale:#FDEBDD;--vert:#1D6B3A;--vert-pale:#E6F3EA;--alerte:#B42318;--alerte-pale:#FDE8E6;
+  --d:"Archivo","Arial Narrow",Arial,sans-serif;--t:"Atkinson","Segoe UI",Roboto,Arial,sans-serif;
+  /* 4 niveaux GAREEPS : rouge, jaune, vert, vert foncé */
+  --n1:#FF0000;--n2:#FFFF00;--n3:#70AD47;--n4:#385723;
+  /* 3 familles d'axes : AFL1 saumon, AFL2 jaune doré, AFL3 vert clair */
+  --f1:#F4B183;--f1t:#833C0B;--f2:#FFD966;--f2t:#7F6000;--f3:#A9D18E;--f3t:#385723}
+@media (prefers-color-scheme:dark){:root{--sol:#11161D;--craie:#1B222C;--encre:#E9EEF3;--repere:#9AA5B3;--trait:#323C49;--sur-encre:#11161D;
+  --ligne:#FB923C;--ligne-fonce:#FDBA74;--ligne-pale:#3A1D0E;--vert:#6FD39F;--vert-pale:#15301F;--alerte:#FF8A80;--alerte-pale:#3A1A18;color-scheme:dark}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--sol);color:var(--encre);font:17px/1.4 var(--t);-webkit-font-smoothing:antialiased;min-height:100vh;padding-bottom:84px}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--ligne);outline-offset:2px}
+[hidden]{display:none!important}
+.disp{font-family:var(--d);font-weight:800;font-stretch:72%}
+/* Barre du haut */
+.barre{display:flex;align-items:center;gap:10px;padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top));background:var(--craie)}
+.barre img{width:36px;height:36px;border-radius:9px;flex:none}
+.barre .app{font:700 16px/1.15 var(--t);flex:1;min-width:0}
+.barre .app small{display:block;font-weight:400;color:var(--repere);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trace{height:8px;background:var(--ligne)}
+/* Séances 1 à 9 */
+.seances{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--encre);color:var(--sur-encre)}
+.seances .lab{font:800 16px/1 var(--d);font-stretch:80%;letter-spacing:.04em;text-transform:uppercase;flex:none}
+.strip{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0;padding:2px 0}
+.strip::-webkit-scrollbar{display:none}
+.strip{gap:4px}.strip button{flex:none;min-width:36px;height:42px;border-radius:10px;font:800 20px/1 var(--d);font-stretch:74%;background:none;color:inherit;border:1.5px solid color-mix(in srgb,currentColor 45%,transparent)}
+.strip button.fait{border-style:solid;border-color:currentColor}
+.strip button.ici{background:var(--ligne);border-color:var(--ligne);color:#fff}
+@media (max-width:440px){.seances .lab{display:none}}
+/* Qui saisit */
+.qui{display:flex;gap:8px;flex-wrap:wrap;padding:10px 16px 0}
+.qui button{min-height:44px;padding:0 16px;border-radius:22px;border:2px solid var(--encre);background:var(--craie);font-weight:700}
+.qui button.ici{background:var(--encre);color:var(--sur-encre)}
+main{padding:12px 16px;max-width:760px;margin:0 auto}
+h2{font:800 30px/1.05 var(--d);font-stretch:74%;margin:8px 0 4px}
+h3{font:800 22px/1.1 var(--d);font-stretch:78%;margin:0 0 6px}
+.muted{color:var(--repere)}.small{font-size:14px}
+.carte{background:var(--craie);border-radius:14px;padding:14px;margin:12px 0;border:1px solid var(--trait)}
+.bt{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:46px;padding:0 16px;border-radius:12px;font:700 16px var(--t);border:2px solid var(--encre);background:var(--craie);text-decoration:none;color:var(--encre)}
+.bt.noir{background:var(--encre);color:var(--sur-encre)}
+.bt.orange{background:var(--ligne);border-color:var(--ligne);color:#fff}
+.bt.mini{min-height:38px;padding:0 12px;font-size:14px}
+.bt.danger{border-color:var(--alerte);color:var(--alerte)}
+.bt[disabled]{opacity:.45;cursor:not-allowed}
+.rangee{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+label.ch{display:block;margin:10px 0 4px;font-weight:700;font-size:15px}
+input[type=text],input[type=url],select,textarea{width:100%;min-height:46px;padding:8px 12px;border-radius:10px;border:1.5px solid var(--trait);background:var(--craie)}
+textarea{min-height:70px;resize:vertical}
+select{appearance:auto}
+/* Familles d'axes */
+.fam{display:inline-block;padding:2px 9px;border-radius:7px;font:700 13px var(--t);color:#14202e}
+.fam.a1{background:var(--f1);color:var(--f1t)}.fam.a2{background:var(--f2);color:var(--f2t)}.fam.a3{background:var(--f3);color:var(--f3t)}
+.axe{border-left:10px solid var(--trait)}
+.axe.a1{border-left-color:var(--f1)}.axe.a2{border-left-color:var(--f2)}.axe.a3{border-left-color:var(--f3)}
+.ok{display:inline-flex;align-items:center;gap:6px;color:var(--vert);font-weight:700}
+.coche{display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 12px;border-radius:12px;background:var(--sol);font-weight:700;margin-top:10px}
+.coche input{width:26px;height:26px;accent-color:var(--vert);flex:none}
+/* Pastilles de niveau GAREEPS */
+.niv{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.niv button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 2px;border-radius:12px;border:2px solid transparent;background:var(--sol);font-size:12.5px;line-height:1.15;text-align:center;color:var(--encre)}
+.niv button i{width:30px;height:30px;border-radius:50%;border:2px solid #555;display:block}
+.niv button.on{border-color:var(--encre);background:var(--craie);font-weight:700}
+.niv button.on i{box-shadow:0 0 0 3px var(--craie),0 0 0 6px var(--encre)}
+.p1{background:var(--n1)}.p2{background:var(--n2)}.p3{background:var(--n3)}.p4{background:var(--n4)}
+.dot{display:inline-block;width:16px;height:16px;border-radius:50%;border:1.5px solid #555;vertical-align:-3px}
+/* Fiche exercice */
+details.fiche{margin-top:8px;background:var(--sol);border-radius:12px;padding:4px 12px}
+details.fiche summary{min-height:44px;display:flex;align-items:center;font-weight:700;cursor:pointer}
+dl.f{margin:4px 0 10px}dl.f dt{font:700 12px var(--t);letter-spacing:.06em;text-transform:uppercase;color:var(--repere);margin-top:8px}dl.f dd{margin:2px 0 0}
+dl.f ul{margin:2px 0;padding-left:20px}
+.exo{border-top:1px dashed var(--trait);padding-top:10px;margin-top:10px}
+.exo:first-of-type{border-top:0}
+/* Étoile */
+.grille-etoile{display:grid;gap:10px}
+.ax-row .niv button{font-size:12px}
+.ax-row .desc{font-size:13px;color:var(--repere);margin-top:4px;min-height:1.2em}
+.radar svg{width:100%;max-width:440px;display:block;margin:0 auto}
+.compteurs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.compteurs div{background:var(--sol);border-radius:12px;padding:8px 4px;text-align:center}
+.compteurs b{display:block;font:800 30px/1 var(--d);font-stretch:74%}
+.compteurs .code{font:800 22px/1 var(--d)}
+.compteurs button{width:42px;height:38px;border-radius:10px;border:1.5px solid var(--encre);background:var(--craie);font-weight:700;margin:2px}
+/* Poule */
+table.cl{width:100%;border-collapse:collapse;font-size:15px}
+table.cl th,table.cl td{padding:7px 6px;border-bottom:1px solid var(--trait);text-align:center}
+table.cl td:nth-child(2),table.cl th:nth-child(2){text-align:left}
+table.cl tr.moi td{font-weight:700}
+.match{display:grid;gap:6px;padding:10px 0;border-bottom:1px solid var(--trait)}
+.match .tete{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.sets{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sets .set{display:flex;align-items:center;gap:3px}
+.sets input{width:52px;min-height:44px;text-align:center;border-radius:10px;border:1.5px solid var(--trait);background:var(--craie);font-weight:700;font-size:18px}
+.badge{display:inline-block;padding:2px 9px;border-radius:7px;font:700 13px var(--t);background:var(--sol)}
+.badge.v{background:var(--vert-pale);color:var(--vert)}
+/* Onglets du bas */
+nav.onglets{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(5,1fr);background:var(--craie);border-top:1px solid var(--trait);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav.onglets button{min-height:62px;border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:700 12px var(--t);padding:0 2px;color:var(--repere)}
+nav.onglets button b{font:800 21px/1 var(--d);font-stretch:74%}
+nav.onglets button.ici{color:var(--ligne-fonce);box-shadow:inset 0 4px 0 var(--ligne)}
+/* Fenêtres */
+.voile{position:fixed;inset:0;background:rgba(10,15,25,.55);display:flex;align-items:flex-end;justify-content:center;z-index:20;padding:12px}
+.fen{background:var(--craie);color:var(--encre);border-radius:18px;padding:18px;max-width:520px;width:100%;max-height:92vh;overflow:auto}
+.fen.alerte{border-top:8px solid var(--n2)}
+.qrbox{background:#fff;padding:12px;border-radius:12px;display:flex;justify-content:center}
+.qrbox svg{width:min(78vw,360px);height:auto}
+.toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translateX(-50%);background:var(--encre);color:var(--sur-encre);padding:10px 16px;border-radius:12px;z-index:30;max-width:90vw}
+.avert{background:var(--ligne-pale);color:var(--ligne-fonce);border-radius:12px;padding:10px 12px;font-weight:700}
+.illus{position:relative;display:block;width:100%;margin:10px 0 0;padding:0;border:1.5px solid var(--trait);border-radius:12px;overflow:hidden;background:#fff;text-align:left}
+.illus img{display:block;width:100%;height:auto;max-height:260px;object-fit:contain;background:#fff}
+.illus .play{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;background:rgba(234,88,12,.92);color:#fff;font-size:28px;display:grid;place-items:center;padding-left:5px;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.illus .lv{display:block;padding:8px 12px;background:var(--encre);color:var(--sur-encre);font-weight:700;font-size:15px}
+.illus.sans .lv{background:var(--sol);color:var(--repere);font-weight:400}
+.sansimg{display:block;padding:24px 12px;color:#14202e;font-weight:700}
+.crit{display:grid;gap:6px;margin-top:6px}
+.crit button{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 12px;border-radius:12px;border:2px solid var(--trait);background:var(--craie);text-align:left;color:var(--encre);font-size:16px;line-height:1.25}
+.crit button i{flex:none;width:30px;height:30px;border-radius:50%;border:2px solid #555}
+.crit button span{flex:1}
+.crit button small{display:block;font-size:12px;font-weight:700;color:var(--repere);text-transform:uppercase;letter-spacing:.04em}
+.crit button em{flex:none;width:28px;font-style:normal;font-weight:800;font-size:22px;color:var(--vert);text-align:center}
+.crit button.on{border-color:var(--encre);background:var(--sol);font-weight:700;box-shadow:inset 6px 0 0 var(--encre)}
+ul.nvl{list-style:none;padding-left:0}ul.nvl li{display:flex;gap:8px;align-items:flex-start;margin:4px 0}ul.nvl .dot{flex:none;margin-top:3px}
+.envoi{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.envoi li{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:12px;background:var(--sol)}
+.envoi li small{display:block;color:var(--repere);font-size:14px}
+.envoi li span:nth-child(2){flex:1}
+.envoi .lettre{flex:none;width:36px;height:36px;border-radius:50%;background:var(--encre);color:var(--sur-encre);display:grid;place-items:center;font:800 20px/1 var(--d)}
+.envoi em{font-style:normal;font-weight:800;color:var(--vert);font-size:22px}
+.envoi li.manque{background:var(--ligne-pale)}.envoi li.manque .lettre{background:var(--ligne-fonce)}
+.gros{display:grid;gap:10px;margin:16px 0}
+.gros .bt{min-height:60px;font-size:18px;width:100%}
+.gros p{margin:-4px 0 0;text-align:center}
+.scan-voile{position:fixed;inset:0;background:rgba(10,15,25,.7);display:flex;align-items:center;justify-content:center;z-index:40;padding:12px}
+.scan-fen{background:var(--craie);color:var(--encre);border-radius:18px;padding:16px;width:100%;max-width:520px}
+.scan-cadre{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:1}
+.scan-cadre video{width:100%;height:100%;object-fit:cover;display:block}
+.scan-viseur{position:absolute;inset:15%;border:4px solid #fff;border-radius:16px;box-shadow:0 0 0 999px rgba(0,0,0,.25)}
+.scan-msg{min-height:2.6em;font-weight:700;margin:10px 0}.scan-msg.ok{color:var(--vert)}.scan-msg.err{color:var(--alerte)}
+.scan-bas{display:flex;justify-content:space-between;align-items:center}
+.principe{margin:8px 2px 0;font-size:17px;line-height:1.35}
+.principe b{display:inline-block;margin-right:6px;padding:1px 8px;border-radius:6px;background:var(--ligne-pale);color:var(--ligne-fonce);font-size:13px;text-transform:uppercase;letter-spacing:.04em;vertical-align:1px}
+.vliste{display:grid;gap:8px}
+.vcarte{display:flex;align-items:center;gap:12px;min-height:60px;padding:8px 12px;border-radius:12px;border:1.5px solid var(--trait);background:var(--sol);text-align:left;color:var(--encre)}
+.vcarte .play{flex:none;width:44px;height:44px;border-radius:50%;background:var(--ligne);color:#fff;display:grid;place-items:center;padding-left:3px}
+.vcarte small{display:block;color:var(--repere);font-size:13px}
+.fen.large{max-width:860px}
+.video{position:relative;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden}
+.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.rgpd{font-size:13px;color:var(--repere)}
+
+/* ---- Outil prof ---- */
+body{padding-bottom:24px}
+main{max-width:1100px}
+#onglets{display:flex;gap:6px;padding:8px 16px;background:var(--encre);overflow-x:auto}
+#onglets button{flex:none;min-height:44px;padding:0 16px;border-radius:10px;border:1.5px solid rgba(255,255,255,.4);background:none;color:#fff;font:800 20px/1 var(--d);font-stretch:78%}
+#onglets button.ici{background:var(--ligne);border-color:var(--ligne)}
+#classes select{width:auto;min-height:38px}
+.grille2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.grille2 .carte{margin:0}
+.poules{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}
+.poules .carte{margin:0}
+.strip{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}
+.strip button{min-width:44px;height:44px;border-radius:10px;border:1.5px solid var(--encre);background:var(--craie);font:800 20px/1 var(--d)}
+.strip button.ici{background:var(--ligne);border-color:var(--ligne);color:#fff}
+.lien{background:none;border:0;padding:0;font:inherit;color:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left}
+td.mv{font-weight:800;color:var(--ligne-fonce)}
+ul.matchs{margin:6px 0;padding-left:18px;font-size:15px}
+ul.matchs li.g{color:var(--vert)}ul.matchs li.p{color:var(--alerte)}
+.tablewrap{overflow-x:auto;border:1px solid var(--trait);border-radius:12px;background:var(--craie)}
+table.bil{font-size:14px;white-space:nowrap}
+table.bil td,table.bil th{padding:6px 8px}
+table.bil td:first-child,table.bil th:first-child{position:sticky;left:0;background:var(--craie);text-align:left}
+td.rg{font-weight:700}td.r1{background:#dff3e8;color:#1f6b3a}td.r2{background:#eef7e6}td.r3{background:#fdf6d8}td.r4{background:#fde8e6}
+td.vide{color:var(--trait)}
+.chiffres{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:10px 0}
+.chiffres div{background:var(--craie);border:1px solid var(--trait);border-radius:12px;padding:10px;text-align:center;font-size:14px;color:var(--repere)}
+.chiffres b{display:block;font:800 28px/1.1 var(--d);font-stretch:74%;color:var(--encre)}
+.et{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0 10px;font-size:15px}
+.travail ul{padding-left:4px;list-style:none}.travail li{margin:4px 0}
+.dot{display:inline-block;width:14px;height:14px;border-radius:50%;border:1.5px solid #555;vertical-align:-2px}
+li.err{color:var(--alerte)}
+.badge.st-present{background:var(--vert-pale);color:var(--vert)}.badge.st-disp{background:#e3ebf8;color:#1f4fa8}.badge.st-absent,.badge.st-rien{background:var(--alerte-pale);color:var(--alerte)}.badge.st-abj{background:#eee;color:#555}.badge.st-oubli{background:var(--ligne-pale);color:var(--ligne-fonce)}
+tr.st-rien td,tr.st-absent td{background:#fdf3f2}tr.st-disp td{background:#f1f5fc}
+table.cl td:first-child+td,table.cl th:first-child+th{text-align:left}
+#main .tablewrap table.cl:not(.bil) td:first-child{text-align:left}
+table.bil td small{color:var(--repere)}
+.qr-plein{position:fixed;inset:0;background:#fff;color:#14202e;z-index:50;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px}
+.qr-plein .qrbox svg{width:min(80vh,90vw);height:auto}
+.qr-plein h2{margin:0 0 4px}
+@media print{#onglets,.barre button,.bt{display:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="barre"><img src="icon-192.png" alt=""><div class="app">Tennis de table · Prof<small>Séances et tournoi des élèves</small></div><div id="classes"></div></div>
+  <div class="trace"></div>
+  <nav id="onglets"></nav>
+</header>
+<main id="main"></main>
+<script src="donnees.js"></script>
+<script src="logique.js"></script>
+<script src="jsqr.js"></script>
+<script src="jszip.js"></script>
+<script src="xlsx.js"></script>
+<script src="qrcode.js"></script>
+<script src="scan.js"></script>
+<script src="prof.js"></script>
+<script>if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});</script>
+</body>
+</html>
