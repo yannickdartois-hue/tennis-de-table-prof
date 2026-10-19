@@ -248,6 +248,11 @@ svg.radar2 .fin{fill:rgba(234,88,12,.18);stroke:#EA580C;stroke-width:3}
 <script src="scan.js"></script>
 <script src="prof.js"></script>
 <script src="prof-plus.js"></script>
-<script>if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});</script>
+<script>if("serviceWorker" in navigator){const avait=!!navigator.serviceWorker.controller;navigator.serviceWorker.register("sw.js").catch(()=>{});
+navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!avait||document.getElementById("maj"))return;const d=document.createElement("div");d.id="maj";
+d.style.cssText="position:fixed;left:12px;right:12px;top:10px;z-index:90;display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#172033;color:#fff;padding:10px 14px;border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.3)";
+d.innerHTML='<span style="flex:1;font-weight:700">✨ Nouvelle version de l’outil prof</span><button class="bt mini orange" type="button" id="maj-ok">Mettre à jour</button><button class="bt mini" type="button" id="maj-non">Plus tard</button>';
+document.body.appendChild(d);d.querySelector("#maj-ok").onclick=()=>location.reload();d.querySelector("#maj-non").onclick=()=>d.remove()});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")navigator.serviceWorker.getRegistration().then(r=>r&&r.update()).catch(()=>{})})}</script>
 </body>
 </html>

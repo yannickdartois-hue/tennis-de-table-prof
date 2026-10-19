@@ -74,7 +74,12 @@ function indicateurs(k,R){
   // étoile : moyenne des axes AFL1 (début → fin)
   const et=recs.filter(r=>r.etoile&&r.etoile.some(Boolean));
   const moyAFL1=e=>{const v=e.slice(0,3).filter(Boolean);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null};
-  return {seances:Ss.length,recues,ex:ex.length,hauts,hautsV,valid,pj:pjs.length,pjOk,pjDiff,mt:mt.size,chg,arb,roles:roles.length,
+  // codes du coach notés au tableau de marque : comme joueur (0-3, x) et comme arbitre-coach (AFL3)
+  const codes=[0,0,0,0,0];let coach=0;
+  poulesClasse().forEach(P=>P.matchs.forEach(m=>{if(!m.co)return;
+    ['a','b'].forEach(s=>{if(cleEleve(P.classe,P.joueurs[m[s]])===k&&m.co[s])m.co[s].forEach((v,i)=>codes[i]+=v)});
+    const ar=P.arbDisp||(m.arb!=null?P.joueurs[m.arb]:'');if(ar&&cleEleve(P.classe,ar)===k)coach++}));
+  return {seances:Ss.length,recues,ex:ex.length,hauts,hautsV,valid,pj:pjs.length,pjOk,pjDiff,mt:mt.size,chg,arb,roles:roles.length,codes,coach,
     etDeb:et.length?moyAFL1(et[0].etoile):null,etFin:et.length>1?moyAFL1(et[et.length-1].etoile):null};
 }
 function suggestionAFL2(I){
@@ -84,7 +89,7 @@ function suggestionAFL2(I){
   if(t>=.9&&I.mt>=2&&I.chg===0)return 4;
   return I.mt>=1?3:2;
 }
-function suggestionAFL3(I){const r=I.roles+(I.valid>=3?1:0);if(!I.arb&&!r)return 1;if(!r)return 2;return r>=2&&I.arb>=4?4:3}
+function suggestionAFL3(I){const r=I.roles+(I.valid>=3?1:0)+(I.coach>=3?1:0);if(!I.arb&&!r)return 1;if(!r)return 2;return r>=2&&I.arb>=4?4:3}
 // Choix tactiques : projets annoncés avant les matchs et réalisés
 function suggestionTactique(I){if(!I.pj)return 1;const t=I.pjOk/I.pj;if(t<.5)return 2;return t>=2/3&&I.pjDiff>=3?4:(I.pjDiff>=2?3:2)}
 // Alerte : auto-évaluation haute alors que les résultats en match sont faibles
@@ -135,7 +140,7 @@ function vNote(){
       <td>${selDegres('afl2',k,N.rep[0],e.afl2)}<div class="small muted">sur ${N.rep[0]} · suggestion D${suggestionAFL2(I)}</div></td>
       <td>${selDegres('afl3',k,N.rep[1],e.afl3)}<div class="small muted">sur ${N.rep[1]} · suggestion D${suggestionAFL3(I)}</div></td>
       <td><b class="tot">${fr(N.tot)}</b></td>
-      <td class="small aides">${I.recues}/${I.seances} séances · ${I.hauts}/${I.ex} exos vert (${I.hautsV} vérifiés) · ${I.valid} validation${I.valid>1?'s':''} faite${I.valid>1?'s':''} · ${I.mt} MT validé${I.mt>1?'s':''} · ${I.chg} chgt axe · ${I.arb} arbitrage${I.arb>1?'s':''}${I.etDeb!=null?` · étoile AFL1 ${fr(I.etDeb)}${I.etFin!=null?'→'+fr(I.etFin):''}`:''}${A.length?`<div class="alerte">${A.map(esc).join('<br>')}</div>`:''}</td></tr>`}).join('')}
+      <td class="small aides">${I.recues}/${I.seances} séances · ${I.hauts}/${I.ex} exos vert (${I.hautsV} vérifiés) · ${I.valid} validation${I.valid>1?'s':''} faite${I.valid>1?'s':''} · ${I.mt} MT validé${I.mt>1?'s':''} · ${I.chg} chgt axe · ${I.arb} arbitrage${I.arb>1?'s':''}${I.coach?` · ${I.coach} match${I.coach>1?'s':''} codé${I.coach>1?'s':''} en coach`:''}${I.codes.some(Boolean)?` · codes reçus 0:${I.codes[0]} 1:${I.codes[1]} 2:${I.codes[2]} 3:${I.codes[3]} x:${I.codes[4]}`:''}${I.etDeb!=null?` · étoile AFL1 ${fr(I.etDeb)}${I.etFin!=null?'→'+fr(I.etFin):''}`:''}${A.length?`<div class="alerte">${A.map(esc).join('<br>')}</div>`:''}</td></tr>`}).join('')}
   </tbody></table></div>
   <p class="small muted">Technique, ${T?'service':'tactique'}, AFL2 et AFL3 : c’est toi qui choisis le degré et la note ; les « suggestions » et les aides viennent des séances reçues (assiduité, exercices, matchs à thème, arbitrages) et ne sont qu’un repère. ${T?'Service : seuils 15 / 25 / 35 % des points de service gagnés en 3 frappes, encore à vérifier en S6.':''}</p>
   <div class="rangee noprint"><button class="bt orange" type="button" data-act="csvnote">Exporter les notes (CSV)</button><button class="bt" type="button" data-act="imprimer">Imprimer</button></div>`;
@@ -238,6 +243,13 @@ function fusionner(src,dst){
 }
 
 /* ---------- Branchement dans prof.js ---------- */
+function codesFiche(k,R){
+  const I=indicateurs(k,R),c=I.codes,g=c[0]+c[1]+c[2]+c[3];if(!g&&!c[4]&&!I.coach)return '';
+  return `<section class="carte"><h3>Codes du coach en match</h3>
+    ${g||c[4]?`<p>Points gagnés : <b>0</b> ${c[0]} · <b>1</b> ${c[1]} · <b>2</b> ${c[2]} · <b>3</b> ${c[3]} — fautes faciles <b>x</b> ${c[4]}</p>
+    <p class="small muted">Score observé (1×1 + 2×2 + 3×3) : ${c[1]+2*c[2]+3*c[3]}${g?' · part des points gagnés « construits » (1, 2, 3) : '+Math.round(100*(c[1]+c[2]+c[3])/g)+' %':''}</p>`:''}
+    ${I.coach?`<p class="small">A codé ${I.coach} match${I.coach>1?'s':''} comme arbitre-coach (AFL3).</p>`:''}</section>`;
+}
 window.PLUS={
   actions:['pilote','csvnote','fusionvers'],
   clic(a,b){
@@ -254,7 +266,7 @@ window.PLUS={
       sauver();rendre();return true}
     return false;
   },
-  fiche:(k,R)=>courbeRang(k,R)+radarEtoiles(k),
+  fiche:(k,R)=>courbeRang(k,R)+radarEtoiles(k)+codesFiche(k,R),
   suggestion
 };
 rendre();

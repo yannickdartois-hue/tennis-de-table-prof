@@ -38,7 +38,7 @@ function ajouterPoule(classe,seance,b,ts){
   if(!b||!b.joueurs||!b.matchs)return;
   const id=norm(classe)+'|'+seance+'|'+b.num,old=DB.poules[id];
   const joues=x=>x.matchs.filter(m=>TTL.etatMatch(m,x.fmt).fini).length;
-  const nv={classe,seance:+seance,num:+b.num,fmt:String(b.fmt||'2'),arbDisp:b.arbDisp||'',joueurs:b.joueurs.slice(),matchs:b.matchs.map(m=>({a:m.a,b:m.b,arb:m.arb,f:m.f||null,pj:m.pj||null,pjok:m.pjok||null,m:(m.m||[]).map(x=>[+x[0],+x[1]])})),ts:ts||0};
+  const nv={classe,seance:+seance,num:+b.num,fmt:String(b.fmt||'2'),arbDisp:b.arbDisp||'',joueurs:b.joueurs.slice(),matchs:b.matchs.map(m=>({a:m.a,b:m.b,arb:m.arb,f:m.f||null,pj:m.pj||null,pjok:m.pjok||null,co:m.co||null,m:(m.m||[]).map(x=>[+x[0],+x[1]])})),ts:ts||0};
   if(old){
     const sig=x=>x.joueurs.map(norm).join('|')+'#'+JSON.stringify(x.matchs.map(m=>[m.f,m.m]));
     if(sig(old)!==sig(nv)&&old.joueurs.map(norm).join('|')!==nv.joueurs.map(norm).join('|')){
@@ -64,7 +64,7 @@ function importerObjet(o,source){
     axes:(o.axes||[]).map(a=>({k:a.axe,val:!!a.valideAujourdhui})),
     chg:(o.changementsAxe||[]).map(c=>({de:c.de,vers:c.vers,motif:c.motif})),
     ex:(o.exercices||[]).map(e=>({axe:e.axe,n:String(e.exercice),niv:e.niveau||0,rq:e.remarque||'',obs:e.verifiePar||''})),
-    bilan:o.bilan||'',disp:!!o.dispense,etoile:o.etoile?o.etoile.map(a=>a.degre||0):null,
+    bilan:o.bilan||'',disp:!!o.dispense,groupe:o.groupe&&o.groupe.length?o.groupe:null,etoile:o.etoile?o.etoile.map(a=>a.degre||0):null,
     grille:o.grilleCoach||null,
     pouleResume:o.poule?{num:o.poule.numero,n:o.poule.nbJoueurs,rang:o.poule.rang,pts:o.poule.points,v:o.poule.victoires,d:o.poule.defaites,mv:o.poule.mouvement||''}:null};
   return ajouterRecord(r);
@@ -73,20 +73,20 @@ function importerObjet(o,source){
 function importerQR(q){
   const ts=q.ts||Date.parse(q.d)/1000||0;
   if(q.t==='T')throw new Error('C’est un QR de changement de groupe (pour un téléphone élève).');
-  if(q.t==='P'){const pp=q.p.length>=5?q.p:[q.p[0],q.p[1],q.p[2],'',q.p[3]];const [num,fmt,joueurs,arbDisp,ms]=pp;ajouterPoule(q.c,q.s,{num,fmt,joueurs,arbDisp,matchs:ms.map(([a,b,arb,f,sets,pj,pjok])=>({a,b,arb,f:f||null,m:sets,pj:pj||null,pjok:pjok||null}))},ts);return 'Poule '+num+' · séance '+q.s}
+  if(q.t==='P'){const pp=q.p.length>=5?q.p:[q.p[0],q.p[1],q.p[2],'',q.p[3]];const [num,fmt,joueurs,arbDisp,ms]=pp;ajouterPoule(q.c,q.s,{num,fmt,joueurs,arbDisp,matchs:ms.map(([a,b,arb,f,sets,pj,pjok,co])=>({a,b,arb,f:f||null,m:sets,pj:pj||null,pjok:pjok||null,co:co?{a:co[0],b:co[1]}:null}))},ts);return 'Poule '+num+' · séance '+q.s}
   if(q.t==='p')return q.e+' : poule seulement';
   const r={classe:q.c||'',eleve:q.e,seance:+q.s,date:q.d,ts,src:'qr',
     axes:(q.x||[]).map(([k,v])=>({k,val:!!v})),
     chg:(q.ch||[]).map(([de,vers,motif])=>({de,vers,motif})),
     ex:(q.ex||[]).map(([a,n,niv,rq,obs])=>({axe:a,n:String(n),niv:niv||0,rq:rq||'',obs:obs||''})),
-    bilan:q.b||'',disp:!!q.dp,etoile:q.et||null,
+    bilan:q.b||'',disp:!!q.dp,groupe:q.gr||null,etoile:q.et||null,
     grille:q.g?{c0:q.g[0],c1:q.g[1],c2:q.g[2],c3:q.g[3],cx:q.g[4],projet:q.pj||'',scoreObserve:q.g[1]+2*q.g[2]+3*q.g[3]}:null,
     pouleResume:q.p?{num:q.p[0],n:q.p[1],rang:q.p[2],pts:q.p[3],mv:q.p[5]||'',v:(q.p[6]||[]).filter(m=>m[1]===1).length,d:(q.p[6]||[]).filter(m=>m[1]===0).length}:null};
   const res=ajouterRecord(r);return q.e+' · séance '+q.s+' ('+res+')';
 }
 async function importerFichiers(files){
   let ok=0,err=[];
-  async function un(nom,texte){try{importerObjet(JSON.parse(texte));ok++}catch(e){err.push(nom+' : '+(e.message||e))}}
+  async function un(nom,texte){try{const o=JSON.parse(texte);if(o&&o.app==='tt-secours')await importerSecours(o);else importerObjet(o);ok++}catch(e){err.push(nom+' : '+(e.message||e))}}
   for(const f of files){
     if(/\.zip$/i.test(f.name)){
       try{const z=await JSZip.loadAsync(f);const L=Object.values(z.files).filter(x=>!x.dir&&/\.json$/i.test(x.name));for(const x of L)await un(x.name.split('/').pop(),await x.async('string'))}
@@ -182,6 +182,7 @@ function vImport(){
   </div>
   <section class="carte"><h3>Dans l’outil</h3><p>${nR} séance${nR>1?'s':''} d’élèves · ${nP} poule${nP>1?'s':''}. Réimporter les mêmes fichiers ne crée pas de doublon.</p>
     ${DB.journal.length?`<ul class="small">${DB.journal.slice(0,6).map(j=>`<li>${new Date(j.d).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} · ${esc(j.t)}${j.err.length?`<ul>${j.err.slice(0,8).map(e=>`<li class="err">${esc(e)}</li>`).join('')}</ul>`:''}</li>`).join('')}</ul>`:''}</section>
+  ${vSecours()}
   <section class="carte"><h3>Passer de l’iPad au PC</h3><p class="small muted">Les données restent sur cet appareil. Exporte une sauvegarde, range-la dans ton espace personnel, puis restaure-la sur l’autre appareil.</p>
     <div class="rangee"><button class="bt mini" type="button" data-act="sauvegarde">Exporter une sauvegarde</button><label class="bt mini" for="resto">Restaurer une sauvegarde</label><input id="resto" type="file" accept=".json" hidden>
     <button class="bt mini danger" type="button" data-act="effacer">Tout effacer</button></div></section>`;
@@ -344,7 +345,7 @@ async function importerListe(files,texte,classeDefaut){
   DB.classe=C[0];sauver();rendre();
 }
 async function qrDemarrage(c){
-  const L=DB.classesL[c],txt=await TTQR.encoder({a:'TTE',v:1,t:'C',c,l:L.eleves,u:L.lien||''});
+  const L=DB.classesL[c],k=await clePublique(),txt=await TTQR.encoder({a:'TTE',v:1,t:'C',c,l:L.eleves,u:L.lien||'',k});
   let svg;try{svg=TTQR.svgQR(txt)}catch(e){svg='<p class="avert">Liste trop longue pour un seul QR.</p>'}
   const d=document.createElement('div');d.className='qr-plein';
   d.innerHTML=`<div><h2>Classe ${esc(c)} · tennis de table</h2><p>Dans l’appli élève : Groupe → « Scanner le QR de la classe »</p><div class="qrbox">${svg}</div><button class="bt noir" type="button">Fermer</button></div>`;
@@ -383,7 +384,63 @@ function vAppel(){
   ${st.map(([k,x])=>`<tr class="st-${x.c}"><td><button class="lien" type="button" data-act="fiche" data-k="${esc(k)}">${esc(nomAffiche(k))}</button>${inList.has(k)||!inList.size?'':' <span class="badge">hors liste</span>'+(window.PLUS&&PLUS.suggestion?PLUS.suggestion(k):'')}</td><td>${STATUTS[x.c]}${x.manuel?' <span class="small muted">(corrigé)</span>':''}</td>
     <td><select data-appel="${esc(k)}"><option value="">auto</option>${['present','disp','absent','abj','oubli'].map(c=>`<option value="${c}"${x.manuel&&x.c===c?' selected':''}>${STATUTS[c]}</option>`).join('')}</select></td></tr>`).join('')}
   </tbody></table></div>
+  ${groupesAppel(DB.seance)}
   <p class="small muted">Auto : séance ou poule reçue = présent ; case « dispensé » cochée par l’élève (ou arbitre dispensé de poule) = dispensé ; rien = rien reçu. « Hors liste » : nom absent de la liste Pronote, à fusionner depuis sa fiche.</p>`;
+}
+
+/* ---------- Groupes : qui n'a pas envoyé ? ---------- */
+const cleGroupe=L=>L.map(cleEleveC).sort().join('#');
+function cleEleveC(n){return cleEleve(DB.classe,n)}
+function groupesAppel(n){
+  const recs=recsClasse(),recu=new Set(recs.filter(r=>Math.floor(r.seance)===n).map(r=>r.k));
+  poulesClasse().filter(p=>Math.floor(p.seance)===n).forEach(p=>p.joueurs.concat(p.arbDisp?[p.arbDisp]:[]).forEach(j=>recu.add(cleEleveC(j))));
+  // groupes qui ont envoyé cette séance
+  const env={};recs.filter(r=>r.seance===n&&r.groupe).forEach(r=>{const g=cleGroupe(r.groupe);(env[g]=env[g]||{noms:r.groupe,src:new Set,ts:0}).src.add(r.src==='qr'?'QR':'en ligne');env[g].ts=Math.max(env[g].ts,r.ts||0)});
+  // dernier groupe connu de chaque élève avant cette séance
+  const dernier={};recs.filter(r=>r.seance<n&&r.groupe).sort((a,b)=>a.seance-b.seance).forEach(r=>dernier[r.k]={noms:r.groupe,s:r.seance});
+  const manq={};Object.entries(dernier).forEach(([k,g])=>{if(recu.has(k))return;const c=cleGroupe(g.noms);(manq[c]=manq[c]||{noms:g.noms,s:g.s,qui:[]}).qui.push(k)});
+  const E=Object.values(env),M=Object.values(manq);
+  if(!E.length&&!M.length)return '';
+  const heure=t=>t?new Date(t*1000).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';
+  return `<section class="carte"><h3>Groupes · séance ${n}</h3>
+    ${M.length?`<p style="color:var(--alerte)"><b>⚠ Rien reçu de :</b></p><ul>${M.map(g=>`<li><b>${g.qui.map(k=>esc(nomAffiche(k))).join(' · ')}</b> <span class="small muted">(groupe de la séance ${g.s} : ${g.noms.map(esc).join(', ')})</span></li>`).join('')}</ul><p class="small muted">Absents ou envoi oublié ? Le carnet reste sur leur tablette : il suffit de rouvrir la séance ${n} et d’envoyer.</p>`:''}
+    ${E.length?`<p><b>✓ Ont envoyé :</b></p><ul class="small">${E.map(g=>`<li>${g.noms.map(esc).join(' · ')} — ${[...g.src].join(' + ')} ${heure(g.ts)}</li>`).join('')}</ul>`:''}</section>`;
+}
+
+/* ---------- Copies de secours des carnets (chiffrées pour le prof) ---------- */
+const b64u=u=>{let x='';new Uint8Array(u).forEach(c=>x+=String.fromCharCode(c));return btoa(x).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')};
+const deb64=t=>Uint8Array.from(atob(t.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
+async function clePublique(){
+  if(!crypto.subtle)return '';
+  if(!DB.cle){const p=await crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'},true,['deriveKey']);
+    DB.cle={pub:b64u(await crypto.subtle.exportKey('raw',p.publicKey)),priv:await crypto.subtle.exportKey('jwk',p.privateKey)};sauver()}
+  return DB.cle.pub;
+}
+async function ouvrirSecours(o){
+  if(!DB.cle)throw new Error('Copie de secours : clé du professeur absente (restaure ta sauvegarde).');
+  const priv=await crypto.subtle.importKey('jwk',DB.cle.priv,{name:'ECDH',namedCurve:'P-256'},false,['deriveKey']);
+  const pub=await crypto.subtle.importKey('raw',deb64(o.epk),{name:'ECDH',namedCurve:'P-256'},false,[]);
+  const cle=await crypto.subtle.deriveKey({name:'ECDH',public:pub},priv,{name:'AES-GCM',length:256},false,['decrypt']);
+  try{return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:deb64(o.iv)},cle,deb64(o.data)))}
+  catch(e){throw new Error('Copie de secours chiffrée avec une autre clé (autre appareil prof ?).')}
+}
+async function importerSecours(o){
+  const txt=await ouvrirSecours(o),c=JSON.parse(txt);if(!c.carnetTT)throw new Error('Copie de secours illisible');
+  DB.secours=DB.secours||{};const id=norm(o.classe)+'|'+(o.noms||[]).map(norm).sort().join('#'),old=DB.secours[id];
+  if(old&&(old.seance>o.seance||(old.seance===o.seance&&old.date>o.date)))return;
+  DB.secours[id]={classe:o.classe,noms:o.noms,seance:o.seance,date:o.date,epk:o.epk,iv:o.iv,data:o.data};
+}
+function vSecours(){
+  const L=Object.entries(DB.secours||{}).filter(([,x])=>!DB.classe||norm(x.classe)===norm(DB.classe)).sort((a,b)=>a[1].noms.join().localeCompare(b[1].noms.join(),'fr'));
+  return `<section class="carte"><h3>Copies de secours des carnets</h3>
+    <p class="small muted">À chaque envoi en ligne, le carnet complet du groupe arrive aussi, chiffré : seul cet outil (ta clé) peut l’ouvrir. Si une tablette est perdue ou réinitialisée, télécharge le carnet ici puis, sur la nouvelle tablette : Mon groupe → « Reprendre un carnet ». Les élèves choisiront un nouveau code.</p>
+    ${L.length?`<ul>${L.map(([id,x])=>`<li><b>${x.noms.map(esc).join(' · ')}</b> <span class="small muted">${esc(x.classe)} · séance ${x.seance} · ${esc(x.date)}</span> <button class="bt mini" type="button" data-act="secours" data-v="${esc(id)}">Télécharger le carnet</button></li>`).join('')}</ul>`:'<p class="muted small">Aucune copie reçue pour l’instant (elles arrivent avec l’envoi en ligne, après le QR de démarrage).</p>'}
+    ${DB.cle?'':'<p class="small avert">La clé est créée au premier « QR de démarrage » : garde une sauvegarde de l’outil, sans elle les copies ne s’ouvrent plus.</p>'}</section>`;
+}
+async function telechargerSecours(id){
+  const x=DB.secours&&DB.secours[id];if(!x)return;
+  try{const txt=await ouvrirSecours(x);telecharger('carnet_'+x.classe+'_'+x.noms.map(n=>n.split(/\s+/)[0]).join('-')+'.json',txt,'application/json')}
+  catch(e){alert(e.message||e)}
 }
 
 /* ---------- Export CSV ---------- */
@@ -418,6 +475,7 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,v=b.dataset.v;
   switch(a){
     case 'vue':DB.vue=v;break;
+    case 'secours':telechargerSecours(v);return;
     case 'seance':DB.seance=+v;break;
     case 'fiche':DB.eleve=b.dataset.k;DB.vue='fiche';window.scrollTo(0,0);break;
     case 'scanner':{let n0=0;TTQR.scanner(async t=>{const q=await TTQR.decoder(t);const r=importerQR(q);n0++;sauver();return '✓ '+r},{continu:true,titre:'QR codes des élèves',aide:'Montre les QR un par un devant la caméra.',onClose:n=>{if(n)journal(n+' QR code'+(n>1?'s':'')+' scanné'+(n>1?'s':''));choisirClasseParDefaut();sauver();rendre();if(n)proposerSauvegarde()}});return}

@@ -30,3 +30,9 @@ Bibliothèques : qrcode-generator (MIT), jsQR (Apache 2.0), JSZip (MIT), SheetJS
 ## Sauvegarde, observateur, projets (19/10/2026)
 - Bandeau de sauvegarde (rouge sans sauvegarde ou au-delà de 7 jours), proposition de sauvegarde après chaque import, stockage persistant demandé au navigateur, invitation à installer l'outil sur l'écran d'accueil (sinon Safari peut effacer les données après 7 jours sans ouverture).
 - Note : niveaux verts « vérifiés » par un observateur, validations faites pour les autres (AFL3), projets de jeu annoncés et réalisés (aide et suggestion pour « choix tactiques »), alerte si les niveaux verts sont rarement vérifiés.
+
+## Groupes, codes du coach, copies de secours (19/10/2026)
+- **Appel** : encadré « Groupes » — qui n'a rien envoyé (d'après le dernier groupe connu de chaque élève) et quels groupes ont envoyé (QR / en ligne, heure).
+- **Codes du coach** (0-3, x) relevés au tableau de marque : visibles dans la fiche élève et dans les aides de la note ; les matchs codés comme arbitre-coach comptent pour la suggestion AFL3.
+- **Copies de secours** (onglet Importer) : la clé est créée au premier « QR de démarrage » et rangée dans la sauvegarde de l'outil. Les fichiers `secours_….json` s'importent comme les autres ; « Télécharger le carnet » donne un fichier à reprendre sur une tablette (Mon groupe → Reprendre un carnet). Sans sauvegarde de l'outil, la clé et donc les copies sont perdues.
+- Bandeau « Nouvelle version » quand l'outil est mis à jour.
