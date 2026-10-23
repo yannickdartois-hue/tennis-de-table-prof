@@ -34,6 +34,19 @@ function ajouterRecord(r){
   if(old&&(old.ts||0)>(r.ts||0)&&old.src==='fichier')return 'déjà à jour';
   DB.rec[id]=Object.assign({k},r);return old?'mis à jour':'nouveau';
 }
+// Deux versions d'une même poule se contredisent si les joueurs diffèrent
+// ou si un match terminé dans les deux n'a pas le même score (deux tablettes, deux saisies).
+function conflitPoule(x,y){
+  if(x.joueurs.map(norm).join('|')!==y.joueurs.map(norm).join('|'))return true;
+  return x.matchs.some(m=>{const n=y.matchs.find(q=>q.a===m.a&&q.b===m.b);
+    return n&&TTL.etatMatch(m,x.fmt).fini&&TTL.etatMatch(n,y.fmt).fini&&JSON.stringify([m.f||null,m.m])!==JSON.stringify([n.f||null,n.m])});
+}
+function libelleVersion(x,L){
+  if(L.some(y=>y.joueurs.map(norm).join('|')!==x.joueurs.map(norm).join('|')))return x.joueurs.map(esc).join(', ');
+  const d=x.matchs.filter(m=>L.some(y=>{const n=y.matchs.find(q=>q.a===m.a&&q.b===m.b);return n&&JSON.stringify([m.f||null,m.m])!==JSON.stringify([n.f||null,n.m])}));
+  const h=x.ts?new Date(x.ts*1000).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'})+' · ':'';
+  return h+d.map(m=>esc(x.joueurs[m.a].split(' ')[0])+'–'+esc(x.joueurs[m.b].split(' ')[0])+' '+(TTL.etatMatch(m,x.fmt).fini?esc(TTL.texteScore(m,x.fmt,'a')):'non joué')).join(' ; ');
+}
 function ajouterPoule(classe,seance,b,ts){
   if(!b||!b.joueurs||!b.matchs)return;
   const id=norm(classe)+'|'+seance+'|'+b.num,old=DB.poules[id];
@@ -41,7 +54,7 @@ function ajouterPoule(classe,seance,b,ts){
   const nv={classe,seance:+seance,num:+b.num,fmt:String(b.fmt||'2'),arbDisp:b.arbDisp||'',joueurs:b.joueurs.slice(),matchs:b.matchs.map(m=>({a:m.a,b:m.b,arb:m.arb,f:m.f||null,pj:m.pj||null,pjok:m.pjok||null,co:m.co||null,m:(m.m||[]).map(x=>[+x[0],+x[1]])})),ts:ts||0};
   if(old){
     const sig=x=>x.joueurs.map(norm).join('|')+'#'+JSON.stringify(x.matchs.map(m=>[m.f,m.m]));
-    if(sig(old)!==sig(nv)&&old.joueurs.map(norm).join('|')!==nv.joueurs.map(norm).join('|')){
+    if(conflitPoule(old,nv)){
       DB.poulesAlt=DB.poulesAlt||{};const L=DB.poulesAlt[id]||(DB.poulesAlt[id]=[]);
       if(!L.some(x=>sig(x)===sig(nv)))L.push(nv);if(!L.some(x=>sig(x)===sig(old)))L.push(old);
       if(old.choisi)return; // le prof a déjà tranché
@@ -125,12 +138,15 @@ function resultatsPoules(){
   recsClasse().forEach(r=>{if(r.pouleResume&&!(R[r.k]&&R[r.k][r.seance])){const p=r.pouleResume;(R[r.k]=R[r.k]||{})[r.seance]={num:p.num,n:p.n,rang:p.rang,pts:p.pts,v:p.v,d:p.d,mg:null,mp:null,pg:null,pp:null,matchs:[],mv:p.mv,resume:true}}});
   return R;
 }
+// Clé de tri « NOM Prénom » à partir de « Prénom NOM » (comme la liste Pronote)
+function cleTri(n){const {nom,pre}=partsNom(n);return nom&&pre?nom+' '+pre:String(n||'')}
+const triNom=(a,b)=>cleTri(a).localeCompare(cleTri(b),'fr');
 function liste(){const c=Object.keys(DB.classesL).find(x=>norm(x)===norm(DB.classe));return c?DB.classesL[c].eleves:[]}
 function eleves(){
   const s=new Set();liste().forEach(n=>{const k=cleEleve(DB.classe,n);retenirNom(k,n);s.add(k)});
   recsClasse().forEach(r=>s.add(r.k));const R=resultatsPoules();Object.keys(R).forEach(k=>s.add(k));
   Object.keys(arbitrages()).forEach(k=>s.add(k));
-  return [...s].sort((a,b)=>nomAffiche(a).localeCompare(nomAffiche(b),'fr'));
+  return [...s].sort((a,b)=>triNom(nomAffiche(a),nomAffiche(b)));
 }
 function bilanEleve(k,R){
   const S=Object.entries((R||resultatsPoules())[k]||{}).sort((a,b)=>a[0]-b[0]);
@@ -203,7 +219,7 @@ function vTournoi(){
     return `<section class="carte"><h3>Poule ${p.num} <span class="small muted">· ${n} joueurs · ${p.fmt==='1'?'1 manche':p.fmt+' manches gagnantes'}</span></h3>
       ${p.arbDisp?`<p class="small">Arbitre : <b>${esc(p.arbDisp)}</b> (dispensé)</p>`:''}
       ${(()=>{const id=norm(p.classe)+'|'+p.seance+'|'+p.num,L=(DB.poulesAlt||{})[id];if(!L||L.length<2)return '';
-        return `<div class="avert small">Versions différentes reçues pour cette poule${p.choisi?' (choix fait)':''} :<br>${L.map((x,i)=>`<button class="bt mini" type="button" data-act="version" data-id="${esc(id)}" data-v="${i}">${x.joueurs.map(esc).join(', ')}</button>`).join(' ')}</div>`})()}
+        return `<div class="avert small"><b>Saisies différentes reçues pour cette poule</b>${p.choisi?' (choix fait)':' : touche la bonne version'} :<br>${L.map((x,i)=>`<button class="bt mini" type="button" data-act="version" data-id="${esc(id)}" data-v="${i}">${libelleVersion(x,L)}</button>`).join(' ')}</div>`})()}
       <table class="cl"><thead><tr><th>Rang</th><th>Joueur</th><th>Pts</th><th>V</th><th>D</th><th>Manches</th><th>Points</th><th></th></tr></thead><tbody>
       ${C.map(c=>{const k=cleEleve(p.classe,p.joueurs[c.i]);const der=Math.max(...P.map(q=>q.num));const mv=tous&&n>1?(c.rang===1&&p.num>1?'↑':c.rang===n&&p.num<der?'↓':''):'';
         return `<tr><td>${c.rang}</td><td><button class="lien" type="button" data-act="fiche" data-k="${esc(k)}">${esc(p.joueurs[c.i])}</button></td><td><b>${c.pts}</b></td><td>${c.v}</td><td>${c.d}</td><td>${c.mg}-${c.mp}</td><td>${c.pg}-${c.pp}</td><td class="mv">${mv}</td></tr>`}).join('')}</tbody></table>
@@ -307,11 +323,19 @@ async function qrReprise(k){
 }
 
 /* ---------- Classes : import des listes Pronote ---------- */
+// Sépare « NOM Prénom » / « Prénom NOM » : les mots en majuscules + les particules
+// en minuscules qui les précèdent (« de VILLIERS », « van der BERG ») forment le nom.
+function partsNom(t){
+  const w=String(t||'').replace(/\s+/g,' ').trim().split(' ').filter(Boolean);
+  const maj=x=>x===x.toUpperCase()&&/[A-ZÀ-Ý]/.test(x),part=x=>/^(de|du|des|d'|d’|le|la|van|von|der|den|di|da|del|dos)$/.test(x);
+  const dans=w.map(maj);
+  for(let i=w.length-2;i>=0;i--)if(!dans[i]&&part(w[i])&&dans[i+1])dans[i]=true;
+  return {nom:w.filter((x,i)=>dans[i]).join(' '),pre:w.filter((x,i)=>!dans[i]).join(' ')};
+}
 function decouperNom(t){
   t=String(t||'').replace(/\s+/g,' ').trim();if(!t)return null;
-  const w=t.split(' '),maj=x=>x===x.toUpperCase()&&/[A-ZÀ-Ý]/.test(x);
-  const nom=w.filter(maj),pre=w.filter(x=>!maj(x));
-  if(nom.length&&pre.length)return pre.join(' ')+' '+nom.join(' ');
+  const {nom,pre}=partsNom(t);
+  if(nom&&pre)return pre+' '+nom;
   return t; // déjà « Prénom Nom » ou tout en majuscules
 }
 function lireLignes(rows,classeDefaut){
@@ -335,14 +359,24 @@ function lireLignes(rows,classeDefaut){
 async function importerListe(files,texte,classeDefaut){
   let lots=[];
   for(const f of files||[]){
-    const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+    const buf=await f.arrayBuffer();let wb;
+    if(/\.(csv|txt)$/i.test(f.name)||/text|csv/.test(f.type)){
+      // CSV : UTF-8 (LibreOffice, Google Sheets, Mac) sinon Windows-1252 (Excel Windows)
+      let t;try{t=new TextDecoder('utf-8',{fatal:true}).decode(buf)}catch(e){t=new TextDecoder('windows-1252').decode(buf)}
+      t=t.replace(/^\uFEFF/,'');const sep=(t.split(/\r?\n/)[0].match(/;/g)||[]).length>=(t.split(/\r?\n/)[0].match(/,/g)||[]).length?';':',';
+      wb=XLSX.read(t,{type:'string',FS:sep});
+    }else wb=XLSX.read(buf,{type:'array'});
+    const avant=lots.length;
     wb.SheetNames.forEach(sn=>lots.push(XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:''})));
+    lots.slice(avant).forEach(r=>r.fichier=f.name);
   }
   if(texte&&texte.trim())lots.push(texte.trim().split(/\r?\n/).map(l=>l.split(/\t|;/)));
-  const tout={};lots.forEach(rows=>Object.entries(lireLignes(rows,classeDefaut)).forEach(([c,set])=>{(tout[c]=tout[c]||new Set());set.forEach(n=>tout[c].add(n))}));
+  const tout={},vides=new Set(),pleins=new Set();lots.forEach(rows=>{const L=lireLignes(rows,classeDefaut),n=Object.keys(L).length;if(rows.fichier)(n?pleins:vides).add(rows.fichier);Object.entries(L).forEach(([c,set])=>{(tout[c]=tout[c]||new Set());set.forEach(n=>tout[c].add(n))})});
+  const rates=[...vides].filter(f=>!pleins.has(f));
   const C=Object.keys(tout);
-  if(!C.length){alert(classeDefaut?'Aucun nom trouvé dans ce fichier.':'Pas de colonne « Classe » dans le fichier : écris le nom de la classe avant d’importer.');return}
-  C.forEach(c=>{const old=DB.classesL[c]||{lien:''};DB.classesL[c]={eleves:[...tout[c]].sort((a,b)=>a.split(' ').slice(-1)[0].localeCompare(b.split(' ').slice(-1)[0],'fr')||a.localeCompare(b,'fr')),lien:old.lien||''}});
+  if(!C.length){alert(classeDefaut?'Aucun nom trouvé dans ce fichier.':'Aucun élève trouvé. Il faut une colonne « Classe », ou bien écrire le nom de la classe avant d’importer.');return}
+  if(rates.length)alert('Aucun élève lu dans : '+rates.join(', ')+'.\nLes autres fichiers sont importés. Vérifie la colonne « Classe » ou importe ce fichier seul en écrivant le nom de la classe.');
+  C.forEach(c=>{const old=DB.classesL[c]||{lien:''};DB.classesL[c]={eleves:[...tout[c]].sort(triNom),lien:old.lien||''}});
   journal('Listes importées : '+C.map(c=>c+' ('+tout[c].size+')').join(', '));
   DB.classe=C[0];sauver();rendre();
 }
@@ -466,7 +500,7 @@ function exporter(type){
     L.forEach(k=>Object.entries(R[k]||{}).sort((a,b)=>a[0]-b[0]).forEach(([s,x])=>rows.push([DB.classe,nomAffiche(k),s,(RC.rangs[k]||{})[s]||'',x.num,x.rang,x.n,x.pts,x.v,x.d,x.mg,x.mp,x.pg,x.pp,x.mv,x.arb||''])));
   }else{
     rows=[['Classe','Élève','Séance','Date','Dispensé','Axe 1','Axe 2','Exercice','Titre','Niveau','Critère atteint','Remarque','Matchs à thème validés ce jour','Changements d’axe','Bilan']];
-    recsClasse().sort((a,b)=>nomAffiche(a.k).localeCompare(nomAffiche(b.k),'fr')||a.seance-b.seance).forEach(r=>{
+    recsClasse().sort((a,b)=>triNom(nomAffiche(a.k),nomAffiche(b.k))||a.seance-b.seance).forEach(r=>{
       const base=[DB.classe,nomAffiche(r.k),r.seance,r.date||'',r.disp?'oui':'',COURT[(r.axes[0]||{}).k]||'',COURT[(r.axes[1]||{}).k]||''];
       const fin=[r.axes.filter(a=>a.val).map(a=>COURT[a.k]).join(', '),r.chg.map(c=>(COURT[c.de]||c.de)+' → '+(COURT[c.vers]||c.vers||'')+' ('+c.motif+')').join(' ; '),r.bilan];
       if(!r.ex.length)rows.push(base.concat(['','','','','']).concat(fin));
