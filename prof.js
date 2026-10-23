@@ -100,8 +100,8 @@ function importerQR(q){
   const res=ajouterRecord(r);return q.e+' · séance '+q.s+' ('+res+')';
 }
 async function importerFichiers(files){
-  let ok=0,err=[];
-  async function un(nom,texte){try{const o=JSON.parse(texte);if(o&&o.app==='tt-secours')await importerSecours(o);else importerObjet(o);ok++}catch(e){err.push(nom+' : '+(e.message||e))}}
+  let ok=0,err=[],cy=0;
+  async function un(nom,texte){try{const o=JSON.parse(texte);if(o&&o.app==='tt-secours')await importerSecours(o);else if(o&&o.app==='tt-pompidou'&&Array.isArray(o.tournois)){CY_FICHIER=CY_FICHIER.concat(o.tournois);cy+=o.tournois.length;return}else importerObjet(o);ok++}catch(e){err.push(nom+' : '+(e.message||e))}}
   for(const f of files){
     if(/\.zip$/i.test(f.name)){
       try{const z=await JSZip.loadAsync(f);const L=Object.values(z.files).filter(x=>!x.dir&&/\.json$/i.test(x.name));for(const x of L)await un(x.name.split('/').pop(),await x.async('string'))}
@@ -109,7 +109,8 @@ async function importerFichiers(files){
     }else if(/\.json$/i.test(f.name)||f.type==='application/json')await un(f.name,await f.text());
     else err.push(f.name+' : ni .json ni .zip');
   }
-  journal(ok+' fichier'+(ok>1?'s':'')+' importé'+(ok>1?'s':'')+(err.length?' · '+err.length+' refusé'+(err.length>1?'s':''):''),err);
+  if(cy)journal(cy+' tournoi'+(cy>1?'s':'')+' du cycle chargé'+(cy>1?'s':'')+' : choisis classe et séance dans « Tournois joués sans tablettes »');
+  if(ok||err.length||!cy)journal(ok+' fichier'+(ok>1?'s':'')+' importé'+(ok>1?'s':'')+(err.length?' · '+err.length+' refusé'+(err.length>1?'s':''):''),err);
   choisirClasseParDefaut();sauver();rendre();if(ok)proposerSauvegarde();
 }
 function journal(t,err){DB.journal.unshift({t,err:err||[],d:new Date().toISOString()});DB.journal=DB.journal.slice(0,20)}
@@ -198,6 +199,7 @@ function vImport(){
     <section class="carte"><h3>Fichiers</h3><p class="small muted">Les fichiers .json déposés par les élèves, ou le dossier du Nuage téléchargé en .zip. Sur ordinateur, tu peux aussi les glisser ici.</p>
       <label class="bt noir" for="fic">Choisir des fichiers</label><input id="fic" type="file" multiple accept=".json,.zip,application/json,application/zip" hidden></section>
   </div>
+  ${typeof vTournoisCycle==='function'?vTournoisCycle():''}
   <section class="carte"><h3>Dans l’outil</h3><p>${nR} séance${nR>1?'s':''} d’élèves · ${nP} poule${nP>1?'s':''}. Réimporter les mêmes fichiers ne crée pas de doublon.</p>
     ${DB.journal.length?`<ul class="small">${DB.journal.slice(0,6).map(j=>`<li>${new Date(j.d).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} · ${esc(j.t)}${j.err.length?`<ul>${j.err.slice(0,8).map(e=>`<li class="err">${esc(e)}</li>`).join('')}</ul>`:''}</li>`).join('')}</ul>`:''}</section>
   ${vSecours()}

@@ -106,6 +106,7 @@ table.cl{width:100%;border-collapse:collapse;font-size:15px}
 table.cl th,table.cl td{padding:7px 6px;border-bottom:1px solid var(--trait);text-align:center}
 table.cl td:nth-child(2),table.cl th:nth-child(2){text-align:left}
 table.cl tr.moi td{font-weight:700}
+.cyl{list-style:none;padding:0;margin:8px 0}.cyl li{padding:10px 0;border-bottom:1px solid var(--trait)}.cyl .rangee{margin-top:6px}.cyl select{width:auto;min-width:140px}
 @media (max-width:480px){table.cl{font-size:13px}table.cl th,table.cl td{padding:6px 3px}.poules .carte{overflow-x:auto}}
 .match{display:grid;gap:6px;padding:10px 0;border-bottom:1px solid var(--trait)}
 .match .tete{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
@@ -178,8 +179,8 @@ main{max-width:1100px}
 #classes select{width:auto;min-height:38px}
 .grille2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
 .grille2 .carte{margin:0}
-.poules{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}
-.poules .carte{margin:0}
+.poules{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,410px),1fr));gap:12px}
+.poules .carte{margin:0;overflow-x:auto}
 .strip{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}
 .strip button{min-width:44px;height:44px;border-radius:10px;border:1.5px solid var(--encre);background:var(--craie);font:800 20px/1 var(--d)}
 .strip button.ici{background:var(--ligne);border-color:var(--ligne);color:#fff}
@@ -250,6 +251,7 @@ svg.radar2 .fin{fill:rgba(234,88,12,.18);stroke:#EA580C;stroke-width:3}
 <script src="prof.js"></script>
 <script src="prof-plus.js"></script>
 <script src="prof-poules.js"></script>
+<script src="prof-cycle.js"></script>
 <script src="prof-demo.js"></script>
 <script>if("serviceWorker" in navigator){const avait=!!navigator.serviceWorker.controller;navigator.serviceWorker.register("sw.js").catch(()=>{});
 navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!avait||document.getElementById("maj"))return;const d=document.createElement("div");d.id="maj";
