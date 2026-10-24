@@ -104,7 +104,7 @@ async function importerFichiers(files){
   async function un(nom,texte){try{const o=JSON.parse(texte);if(o&&o.app==='tt-secours')await importerSecours(o);else if(o&&o.app==='tt-pompidou'&&Array.isArray(o.tournois)){CY_FICHIER=CY_FICHIER.concat(o.tournois);cy+=o.tournois.length;return}else importerObjet(o);ok++}catch(e){err.push(nom+' : '+(e.message||e))}}
   for(const f of files){
     if(/\.zip$/i.test(f.name)){
-      try{const z=await JSZip.loadAsync(f);const L=Object.values(z.files).filter(x=>!x.dir&&/\.json$/i.test(x.name));for(const x of L)await un(x.name.split('/').pop(),await x.async('string'))}
+      try{if(!window.JSZip)await chargerScript('jszip.js');const z=await JSZip.loadAsync(f);const L=Object.values(z.files).filter(x=>!x.dir&&/\.json$/i.test(x.name));for(const x of L)await un(x.name.split('/').pop(),await x.async('string'))}
       catch(e){err.push(f.name+' : zip illisible')}
     }else if(/\.json$/i.test(f.name)||f.type==='application/json')await un(f.name,await f.text());
     else err.push(f.name+' : ni .json ni .zip');
@@ -358,8 +358,12 @@ function lireLignes(rows,classeDefaut){
   });
   return out;
 }
+// Bibliothèques lourdes chargées seulement quand on en a besoin (xlsx : 880 Ko). Elles restent en cache pour le hors ligne.
+function chargerScript(src){return new Promise((ok,ko)=>{if(document.querySelector('script[data-lib="'+src+'"]')){const t=setInterval(()=>{if(src==='xlsx.js'?window.XLSX:window.JSZip){clearInterval(t);ok()}},50);return}
+  const e=document.createElement('script');e.src=src;e.dataset.lib=src;e.onload=()=>ok();e.onerror=()=>ko(new Error('Impossible de charger '+src));document.head.appendChild(e)})}
 async function importerListe(files,texte,classeDefaut){
   let lots=[];
+  if(files&&files.length&&!window.XLSX)await chargerScript('xlsx.js');
   for(const f of files||[]){
     const buf=await f.arrayBuffer();let wb;
     if(/\.(csv|txt)$/i.test(f.name)||/text|csv/.test(f.type)){

@@ -117,6 +117,7 @@ function vNote(){
   const K=[...new Set(poulesClasse().map(p=>p.seance))].sort((a,b)=>a-b);
   const tr=tableRang('',R,C);
   return `<h2>Note · ${esc(DB.classe)}</h2>
+  <div class="rangee noprint"><button class="bt orange" type="button" data-act="saisierapide">Saisie rapide, élève par élève</button><span class="small muted">4 gros boutons par critère, − / + pour ajuster, Suivant.</span></div>
   <section class="carte"><h3>Réglages</h3>
     <div class="grille2">
       <label>Barème <select data-ncfg="niveau"><option value="1"${!T?' selected':''}>Première : table et rang /5</option><option value="T"${T?' selected':''}>Terminale : victoires dans la poule /4</option></select></label>

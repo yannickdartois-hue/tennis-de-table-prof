@@ -44,3 +44,6 @@ L'Appel signale aussi les élèves dont la **poule** est arrivée mais pas la **
 
 ## Poules du jour (19/10/2026) — `prof-poules.js`
 Pilotage → « Poules du jour » : proposition à partir d'une séance (1er monte, dernier descend) ou du classement de la classe, modifiable le jour même (absent, dispensé, ↑/↓ d'une poule, arbitre dispensé, rééquilibrage 3 à 5, séance, tour, format). Un QR par poule (`t:'Q'`), affichable table par table ou imprimable sur une feuille. L'appli élève le scanne (Poule → « Scanner le QR de la poule ») : le formulaire se remplit et reste modifiable.
+
+## Test automatique (avant chaque mise en ligne)
+`tests/circuit.js` rejoue le circuit sur une classe fictive : import CSV, conflit de scores, tournoi du cycle, saisie rapide des notes, exports, code élève et anti-essais, hors ligne des 3 applis, débordements (téléphone, iPad, Galaxy Tab), cibles tactiles. Mode d'emploi en tête du fichier.

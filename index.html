@@ -16,7 +16,7 @@
 @font-face{font-family:"Atkinson";src:url(polices/atkinson-400.woff2) format("woff2");font-weight:400;font-display:swap}
 @font-face{font-family:"Atkinson";src:url(polices/atkinson-700.woff2) format("woff2");font-weight:700;font-display:swap}
 /* Charte des applis de cycle (ecran.css) + couleurs GAREEPS d'origine */
-:root{--sol:#ECEFEE;--craie:#FFFFFF;--encre:#172033;--repere:#5A6475;--trait:#D5DBDD;--sur-encre:#FFFFFF;
+:root{--sol:#F3F5F8;--craie:#FFFFFF;--encre:#172033;--repere:#5A6475;--trait:#DDE2E8;--sur-encre:#FFFFFF;
   --ligne:#EA580C;--ligne-fonce:#9A3412;--ligne-pale:#FDEBDD;--vert:#1D6B3A;--vert-pale:#E6F3EA;--alerte:#B42318;--alerte-pale:#FDE8E6;
   --d:"Archivo","Arial Narrow",Arial,sans-serif;--t:"Atkinson","Segoe UI",Roboto,Arial,sans-serif;
   /* 4 niveaux GAREEPS : rouge, jaune, vert, vert foncé */
@@ -236,6 +236,31 @@ svg.radar2 .fin{fill:rgba(234,88,12,.18);stroke:#EA580C;stroke-width:3}
 i.p1,i.p2,i.p3,i.p4{display:inline-grid;place-items:center;font:900 10px/1 system-ui,sans-serif;font-style:normal}
 i.p1::after{content:"1";color:#fff}i.p2::after{content:"2";color:#000}i.p3::after{content:"3";color:#fff}i.p4::after{content:"4";color:#fff}
 .crit button i.p1::after,.crit button i.p2::after,.crit button i.p3::after,.crit button i.p4::after,.niv button i::after{font-size:15px}
+/* Cibles tactiles : 44 px minimum au doigt (iPad au gymnase) */
+.bt.mini{min-height:44px}
+label.coche.mini{min-height:44px}
+.note select.nsel{min-height:44px}
+td .lien,li .lien{display:inline-flex;align-items:center;min-height:44px;padding:0 2px}
+td .bt.mini{min-width:44px}
+/* Saisie rapide des notes */
+.sr{position:fixed;inset:0;z-index:70;background:rgba(10,15,25,.55);display:flex;justify-content:center;align-items:stretch;padding:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom))}
+.sr-in{background:var(--craie);color:var(--encre);border-radius:18px;width:min(760px,100%);overflow:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.sr-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.sr-h h2{margin:2px 0 0}
+.sr-res{display:flex;gap:18px;flex-wrap:wrap;font-size:18px}.sr-res .tot{font:800 26px/1 var(--d)}
+.sr-rep{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sr .on{outline:3px solid var(--encre);outline-offset:2px}
+.sr-c{border-top:1px solid var(--trait);padding-top:10px;display:grid;grid-template-columns:1fr auto;gap:8px 12px;align-items:center}
+.sr-l{grid-column:1/-1;font-size:18px}
+.sr-d{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sr-b{min-height:64px;border-radius:12px;border:2px solid var(--trait);background:var(--sol);font:800 20px/1.1 var(--d);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--encre)}
+.sr-b small{font:400 13px var(--t);color:var(--repere)}.sr-b i{width:16px;height:16px;border-radius:50%}
+.sr-b.n1 i{background:var(--n1)}.sr-b.n2 i{background:var(--n2);box-shadow:inset 0 0 0 1px #0003}.sr-b.n3 i{background:var(--n3)}.sr-b.n4 i{background:var(--n4)}
+.sr-b.on{border-color:var(--encre);background:var(--craie)}
+.sr-v{display:flex;align-items:center;gap:8px}.sr-v b{font:800 28px/1 var(--d);min-width:56px;text-align:center}
+.sr-pm{width:56px;height:56px;border-radius:12px;border:2px solid var(--encre);background:var(--craie);font:800 28px/1 var(--d);color:var(--encre)}
+.sr-nav{display:flex;justify-content:space-between;gap:10px;margin-top:4px}.sr-nav .bt{min-height:56px;flex:1}
+@media (max-width:560px){.sr-c{grid-template-columns:1fr}.sr-b small{display:none}}
+@media print{.sr{display:none}}
 </style>
 </head>
 <body>
@@ -248,14 +273,13 @@ i.p1::after{content:"1";color:#fff}i.p2::after{content:"2";color:#000}i.p3::afte
 <script src="donnees.js"></script>
 <script src="logique.js"></script>
 <script src="jsqr.js"></script>
-<script src="jszip.js"></script>
-<script src="xlsx.js"></script>
 <script src="qrcode.js"></script>
 <script src="scan.js"></script>
 <script src="prof.js"></script>
 <script src="prof-plus.js"></script>
 <script src="prof-poules.js"></script>
 <script src="prof-cycle.js"></script>
+<script src="prof-saisie.js"></script>
 <script src="prof-demo.js"></script>
 <script>if("serviceWorker" in navigator){const avait=!!navigator.serviceWorker.controller;navigator.serviceWorker.register("sw.js").catch(()=>{});
 navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!avait||document.getElementById("maj"))return;const d=document.createElement("div");d.id="maj";
