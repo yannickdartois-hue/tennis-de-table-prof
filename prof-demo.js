@@ -106,6 +106,6 @@ document.addEventListener('click',e=>{
 const st=document.createElement('style');
 st.textContent=`.demo-bandeau{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:10px 14px;border-radius:12px;background:#FFF3C4;color:#5C4300;border:2px dashed #C99A00}
 .demo-bandeau span{flex:1}.demo-carte{border-style:dashed}
-@media (prefers-color-scheme:dark){.demo-bandeau{background:#3A3010;color:#FFE08A;border-color:#8A6D00}}`;
+:root[data-theme="dark"] .demo-bandeau{background:#3A3010;color:#FFE08A;border-color:#8A6D00}`;
 document.head.appendChild(st);
 if(/[?&]demo\b/.test(location.search))entrerDemo();else rendre();
