@@ -192,7 +192,7 @@ function rendre(){
 }
 function vImport(){
   const nR=Object.keys(DB.rec).length,nP=Object.keys(DB.poules).length;
-  return `<h2>Récupérer les séances</h2>
+  return `${rappelArchive()}<h2>Récupérer les séances</h2>
   <div class="grille2">
     <section class="carte"><h3>QR codes</h3><p class="small muted">Les élèves montrent leurs QR en fin de séance : scanne-les à la suite, la caméra reste ouverte.</p>
       <button class="bt orange" type="button" data-act="scanner">Scanner les QR codes</button></section>
@@ -238,11 +238,11 @@ function vEleves(){
   if(DB.tri==='classement')L.sort((a,b)=>((CC[a]||{}).place||999)-((CC[b]||{}).place||999));
   return `<h2>Élèves · ${esc(DB.classe||'')}</h2><p class="small muted">Pour chaque séance : n° de poule, rang dans la poule et (rang dans la classe). Touche un nom pour voir sa fiche.</p>
   <div class="rangee" style="margin-bottom:8px"><span class="small">Trier par :</span><button class="bt mini${DB.tri!=='classement'?' noir':''}" type="button" data-act="tri" data-v="nom">Nom</button><button class="bt mini${DB.tri==='classement'?' noir':''}" type="button" data-act="tri" data-v="classement">Classement du cycle</button></div>
-  <div class="tablewrap"><table class="cl bil"><thead><tr><th>Élève</th><th>Classement</th><th>Rang classe moy.</th>${S.map(s=>`<th>${labC(s)}</th>`).join('')}<th>Abs.</th><th>Disp.</th><th>Matchs</th><th>V</th><th>D</th><th>% V</th><th>Manches G-P</th><th>Points G-P</th><th>Poule moy.</th><th>Exos</th><th>Chgt axe</th></tr></thead><tbody>
+  <div class="tablewrap"><table class="cl bil"><thead><tr><th>Élève</th><th>Classement</th><th>Rang classe moy.</th>${S.map(s=>`<th>${labC(s)}</th>`).join('')}<th>Abs.</th><th>Disp.</th><th>Ret.</th><th>Tenue</th><th>Matchs</th><th>V</th><th>D</th><th>% V</th><th>Manches G-P</th><th>Points G-P</th><th>Poule moy.</th><th>Exos</th><th>Chgt axe</th></tr></thead><tbody>
   ${L.map(k=>{const t=bilanEleve(k,R),x=R[k]||{};const recs=new Set(recsClasse().filter(r=>r.k===k).map(r=>r.seance));
     const st=S.map(s=>statut(k,s,R,A).c),cc=CC[k];
     return `<tr><td><button class="lien" type="button" data-act="fiche" data-k="${esc(k)}">${esc(nomAffiche(k))}</button></td><td><b>${cc?cc.place:'–'}</b></td><td>${cc?String(cc.moy).replace('.',','):'–'}</td>${S.map((s,j)=>{const c=x[s];if(c)return `<td class="rg r${Math.min(c.rang,4)}">P${c.num}·${c.rang}/${c.n} <small>(${(RC[k]||{})[s]})</small></td>`;const v=st[j];return `<td class="${v==='rien'?'vide':''}">${v==='disp'?'Disp.':v==='absent'||v==='abj'?'Abs.':recs.has(s)?'✓':'–'}</td>`}).join('')}
-    <td>${st.filter(v=>v==='absent'||v==='abj').length||''}</td><td>${st.filter(v=>v==='disp').length||''}</td>
+    <td>${st.filter(v=>v==='absent'||v==='abj').length||''}</td><td>${st.filter(v=>v==='disp').length||''}</td><td>${st.filter(v=>v==='retard').length||''}</td><td>${st.filter(v=>v==='tenue').length||''}</td>
     <td>${t.matchs}</td><td>${t.v}</td><td>${t.d}</td><td>${t.pctV==null?'–':t.pctV+' %'}</td><td>${t.complet?t.mg+'-'+t.mp:'–'}</td><td>${t.complet?t.pg+'-'+t.pp:'–'}</td><td>${t.pouleMoy==null?'–':String(t.pouleMoy).replace('.',',')}</td><td>${t.exos}${t.verts?` <span class="small muted">(${t.verts} vert)</span>`:''}</td><td>${t.chg||''}</td></tr>`}).join('')}
   </tbody></table></div>
   <p class="small muted">Classement du cycle : moyenne des rangs dans la classe sur les séances jouées. « ✓ » : séance reçue sans poule. « – » : rien reçu (voir l’onglet Appel). Couleur : rang dans la poule.</p>`;
@@ -287,7 +287,7 @@ function vExport(){
 
 /* ---------- Arbitres dispensés, appel, classements de classe ---------- */
 function arbitrages(){const A={};poulesClasse().forEach(P=>{if(!P.arbDisp)return;const k=cleEleve(P.classe,P.arbDisp);(A[k]=A[k]||{})[P.seance]={num:P.num,matchs:P.matchs.filter(m=>TTL.etatMatch(m,P.fmt).fini).length}});return A}
-const STATUTS={present:'Présent',disp:'Dispensé',absent:'Absent',abj:'Absent justifié',oubli:'Oubli d’envoi',rien:'Rien reçu'};
+const STATUTS={present:'Présent',disp:'Dispensé',absent:'Absent',abj:'Absent justifié',oubli:'Oubli d’envoi',rien:'Rien reçu',retard:'En retard',tenue:'Oubli de tenue'};
 function statut(k,s,R,A){
   const o=DB.appel[norm(DB.classe)+'|'+s+'|'+k];if(o)return {c:o,manuel:true};
   const r=DB.rec[k+'|'+s];
@@ -393,9 +393,14 @@ async function qrDemarrage(c){
   d.innerHTML=`<div><h2>Classe ${esc(c)} · tennis de table</h2><p>Dans l’appli élève : Groupe → « Scanner le QR de la classe »</p><div class="qrbox">${svg}</div><button class="bt noir" type="button">Fermer</button></div>`;
   d.querySelector('button').onclick=()=>d.remove();document.body.appendChild(d);
 }
+/* rappel d'archivage : séances reçues pendant une année scolaire précédente (l'année commence le 15 août) */
+const anneeSco=ms=>{const d=new Date(ms);return d.getFullYear()-((d.getMonth()<7||(d.getMonth()===7&&d.getDate()<15))?1:0)};
+function rappelArchive(){if(typeof DEMO!=='undefined'&&DEMO)return '';const now=anneeSco(Date.now());let y=null;
+  Object.values(DB.rec).forEach(r=>{if(r&&r.ts){const a=anneeSco(r.ts*1000);if(a<now&&(y==null||a<y))y=a}});
+  return y==null?'':`<section class="carte rappel-archive"><h3>Nouvelle année scolaire</h3><p class="small">L’outil contient encore des séances de ${y}-${y+1}. Archive-les avant d’importer les classes de cette année : la sauvegarde est téléchargée, puis l’outil repart à zéro.</p><button class="bt" type="button" data-act="archiver">Archiver ${y}-${y+1} et repartir à zéro</button></section>`}
 function vClasses(){
   const C=Object.keys(DB.classesL).sort();
-  return `<h2>Classes</h2>
+  return `${rappelArchive()}<h2>Classes</h2>
   <section class="carte"><h3>Importer une liste Pronote</h3>
     <p class="small muted">Pronote : liste des élèves de la classe → Exporter (xlsx, xls ou csv). Si le fichier a une colonne « Classe », plusieurs classes peuvent être importées d’un coup. Tu peux aussi coller la liste (un élève par ligne, « NOM Prénom »).</p>
     <div class="grille2"><div><label class="ch" for="cl-nom">Classe (si le fichier ne la donne pas)</label><input id="cl-nom" type="text" placeholder="1G3"></div>
@@ -424,7 +429,7 @@ function vAppel(){
   ${seancesClasse().includes(DB.seance)?'':'<p class="muted small">Rien n’a encore été reçu pour cette séance.</p>'}
   <div class="tablewrap"><table class="cl"><thead><tr><th>Élève</th><th>Statut</th><th>Corriger</th></tr></thead><tbody>
   ${st.map(([k,x])=>`<tr class="st-${x.c}"><td><button class="lien" type="button" data-act="fiche" data-k="${esc(k)}">${esc(nomAffiche(k))}</button>${inList.has(k)||!inList.size?'':' <span class="badge">hors liste</span>'+(window.PLUS&&PLUS.suggestion?PLUS.suggestion(k):'')}</td><td>${STATUTS[x.c]}${x.manuel?' <span class="small muted">(corrigé)</span>':''}</td>
-    <td><select data-appel="${esc(k)}"><option value="">auto</option>${['present','disp','absent','abj','oubli'].map(c=>`<option value="${c}"${x.manuel&&x.c===c?' selected':''}>${STATUTS[c]}</option>`).join('')}</select></td></tr>`).join('')}
+    <td><select data-appel="${esc(k)}"><option value="">auto</option>${['present','retard','tenue','disp','absent','abj','oubli'].map(c=>`<option value="${c}"${x.manuel&&x.c===c?' selected':''}>${STATUTS[c]}</option>`).join('')}</select></td></tr>`).join('')}
   </tbody></table></div>
   ${groupesAppel(DB.seance)}
   <p class="small muted">Auto : séance ou poule reçue = présent ; case « dispensé » cochée par l’élève (ou arbitre dispensé de poule) = dispensé ; rien = rien reçu. « Hors liste » : nom absent de la liste Pronote, à fusionner depuis sa fiche.</p>`;
@@ -498,8 +503,8 @@ function exporter(type){
   let rows;
   if(type==='bilan'){
     const CC=classementCycle(R),A=arbitrages(),Ss=seancesClasse();
-    rows=[['Classe','Élève','Classement du cycle','Rang classe moyen','Absences','Dispenses','Séances jouées','Matchs','Victoires','Défaites','% victoires','Manches gagnées','Manches perdues','Points gagnés','Points perdus','Poule moyenne','Meilleure poule','Dernière poule','Rang moyen','Séances de travail','Exercices','Niveaux vert ou vert foncé','Changements d’axe non validés','Matchs à thème validés']];
-    L.forEach(k=>{const t=bilanEleve(k,R),cc=CC[k],st=Ss.map(s=>statut(k,s,R,A).c);rows.push([DB.classe,nomAffiche(k),cc?cc.place:'',cc?dec(cc.moy):'',st.filter(v=>v==='absent'||v==='abj').length,st.filter(v=>v==='disp').length,t.seances,t.matchs,t.v,t.d,t.pctV,t.complet?t.mg:'',t.complet?t.mp:'',t.complet?t.pg:'',t.complet?t.pp:'',dec(t.pouleMoy),t.meilleure,t.derniere,dec(t.rangMoy),t.travail,t.exos,t.verts,t.chg,t.mtValides.map(a=>COURT[a]).join(', ')])});
+    rows=[['Classe','Élève','Classement du cycle','Rang classe moyen','Absences','Dispenses','Retards','Oublis de tenue','Séances jouées','Matchs','Victoires','Défaites','% victoires','Manches gagnées','Manches perdues','Points gagnés','Points perdus','Poule moyenne','Meilleure poule','Dernière poule','Rang moyen','Séances de travail','Exercices','Niveaux vert ou vert foncé','Changements d’axe non validés','Matchs à thème validés']];
+    L.forEach(k=>{const t=bilanEleve(k,R),cc=CC[k],st=Ss.map(s=>statut(k,s,R,A).c);rows.push([DB.classe,nomAffiche(k),cc?cc.place:'',cc?dec(cc.moy):'',st.filter(v=>v==='absent'||v==='abj').length,st.filter(v=>v==='disp').length,st.filter(v=>v==='retard').length,st.filter(v=>v==='tenue').length,t.seances,t.matchs,t.v,t.d,t.pctV,t.complet?t.mg:'',t.complet?t.mp:'',t.complet?t.pg:'',t.complet?t.pp:'',dec(t.pouleMoy),t.meilleure,t.derniere,dec(t.rangMoy),t.travail,t.exos,t.verts,t.chg,t.mtValides.map(a=>COURT[a]).join(', ')])});
   }else if(type==='tournoi'){
     const RC=rangsClasse(R);
     rows=[['Classe','Élève','Séance','Rang dans la classe','Poule','Rang','Joueurs','Points','Victoires','Défaites','Manches gagnées','Manches perdues','Points gagnés','Points perdus','Ensuite','Arbitrages']];

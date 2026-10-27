@@ -201,6 +201,7 @@ td.vide{color:var(--trait)}
 .travail ul{padding-left:4px;list-style:none}.travail li{margin:4px 0}
 .dot{display:inline-block;width:14px;height:14px;border-radius:50%;border:1.5px solid #555;vertical-align:-2px}
 li.err{color:var(--alerte)}
+.badge.st-retard{background:#e0e7ff;color:#3730a3}.badge.st-tenue{background:#fef3c7;color:#92400e}.rappel-archive{border:2px solid #b45309!important;background:#fffbeb!important}.rappel-archive h3{color:#92400e}
 .badge.st-present{background:var(--vert-pale);color:var(--vert)}.badge.st-disp{background:#e3ebf8;color:#1f4fa8}.badge.st-absent,.badge.st-rien{background:var(--alerte-pale);color:var(--alerte)}.badge.st-abj{background:#eee;color:#555}.badge.st-oubli{background:var(--ligne-pale);color:var(--ligne-fonce)}
 tr.st-rien td,tr.st-absent td{background:#fdf3f2}tr.st-disp td{background:#f1f5fc}
 table.cl td:first-child+td,table.cl th:first-child+th{text-align:left}
@@ -261,6 +262,7 @@ td .bt.mini{min-width:44px}
 .sr-nav{display:flex;justify-content:space-between;gap:10px;margin-top:4px}.sr-nav .bt{min-height:56px;flex:1}
 @media (max-width:560px){.sr-c{grid-template-columns:1fr}.sr-b small{display:none}}
 @media print{.sr{display:none}}
+.baide{flex:0 0 auto;width:44px;min-width:44px;height:44px;padding:0!important;border-radius:50%!important;font-weight:900;font-size:19px;margin-left:auto}
 </style>
 <style>/* Lisibilité terrain : textes à 15 px minimum à l'écran ; tailles d'origine à l'impression. */@media print{:root{--fs-min:0px}}</style>
 <link rel="stylesheet" href="eps-charte-v1.css">
@@ -270,7 +272,7 @@ td .bt.mini{min-width:44px}
 </head>
 <body>
 <header>
-  <div class="barre"><img src="icon-192.png" alt=""><div class="app">Tennis de table · Prof<small>Séances et tournoi des élèves</small></div><div id="classes"></div></div>
+  <div class="barre"><img src="icon-192.png" alt=""><div class="app">Tennis de table · Prof<small>Séances et tournoi des élèves</small></div><button type="button" class="bt mini baide" onclick="EPSAide.ouvrir()" aria-label="Mode d’emploi" title="Mode d’emploi">?</button><div id="classes"></div></div>
   <div class="trace"></div>
   <nav id="onglets"></nav>
 </header>
@@ -292,5 +294,7 @@ d.style.cssText="position:fixed;left:12px;right:12px;top:10px;z-index:90;display
 d.innerHTML='<span style="flex:1;font-weight:700">✨ Nouvelle version de l’outil prof</span><button class="bt mini orange" type="button" id="maj-ok">Mettre à jour</button><button class="bt mini" type="button" id="maj-non">Plus tard</button>';
 document.body.appendChild(d);d.querySelector("#maj-ok").onclick=()=>location.reload();d.querySelector("#maj-non").onclick=()=>d.remove()});
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")navigator.serviceWorker.getRegistration().then(r=>r&&r.update()).catch(()=>{})})}</script>
+<script src="aide.js"></script>
+<script src="eps-aide.js"></script>
 </body>
 </html>
