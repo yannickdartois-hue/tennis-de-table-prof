@@ -66,8 +66,8 @@ function ouvrir(publicId){
     <label class="epsa-lis"><input type="checkbox" ${lire()?'checked':''} data-epsa-lis> Lecture facilitée (dyslexie)</label>
     <button type="button" class="epsa-fermer" data-epsa-fermer>Fermer</button></div>
     <div class="epsa-onglets"></div><div class="epsa-corps"></div>
-    <div class="epsa-pied">${A.pied||'Les données restent sur l’appareil. Une question, une idée : parlez-en à votre professeur d’EPS.'}</div></div>`;
-  document.body.appendChild(v);rendre(v);
+    <div class="epsa-pied">${A.pied||'Les données restent sur l’appareil. Une question, une idée : parlez-en à votre professeur d’EPS.'}<br><span data-epsa-stock></span></div></div>`;
+  document.body.appendChild(v);rendre(v);etatStockage(v);
   v.addEventListener('click',e=>{const t=e.target;
     if(t===v||t.closest('[data-epsa-fermer]'))return fermer();
     const b=t.closest('[data-epsa-pub]');if(b){pub=b.dataset.epsaPub;rendre(v);v.querySelector('.epsa-corps').scrollTop=0}});
@@ -75,7 +75,22 @@ function ouvrir(publicId){
   document.addEventListener('keydown',echap);
   const f=v.querySelector('.epsa-fermer');if(f)f.focus();
 }
-window.EPSAide={ouvrir,fermer,lisible:v=>{ecrire(v);appliquer(v)}};
+/* Stockage protégé : demande au navigateur de ne jamais effacer les données des applis EPS
+   (Chrome les efface quand la place manque, Safari après 7 jours sans ouverture d'un site non installé).
+   La protection vaut pour tout le site yannickdartois-hue.github.io, donc pour toutes les applis.
+   Chrome et Safari l'accordent sans question, surtout pour une appli installée sur l'écran d'accueil. */
+let protege=null;
+async function proteger(){
+  try{if(!navigator.storage||!navigator.storage.persist)return protege=null;
+    if(await navigator.storage.persisted())return protege=true;
+    return protege=await navigator.storage.persist()}catch(e){return protege=null}}
+const pret=proteger();
+async function etatStockage(v){const el=v.querySelector('[data-epsa-stock]');if(!el)return;await pret;
+  if(protege==null&&navigator.storage&&navigator.storage.persisted)try{protege=await navigator.storage.persisted()}catch(e){}
+  el.innerHTML=protege===true?'🔒 Données protégées sur cet appareil : le navigateur ne les effacera pas.'
+    :protege===false?'⚠ Données non protégées : installez l’appli sur l’écran d’accueil (menu du navigateur → « Ajouter à l’écran d’accueil »), puis rouvrez-la.'
+    :'Protection des données non disponible sur ce navigateur : faites des sauvegardes régulières.'}
+window.EPSAide={ouvrir,fermer,lisible:v=>{ecrire(v);appliquer(v)},stockage:()=>pret.then(()=>protege),proteger};
 function bouton(){if(A.bouton===false||document.querySelector('.epsa-btn'))return;
   const b=document.createElement('button');b.type='button';b.className='epsa-btn';b.textContent='?';b.title='Mode d’emploi';b.setAttribute('aria-label','Mode d’emploi');
   if(A.bas)document.documentElement.style.setProperty('--epsa-bas',A.bas);
