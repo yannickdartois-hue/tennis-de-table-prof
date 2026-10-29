@@ -1,6 +1,6 @@
 /* Hors ligne : l'outil est gardé sur l'iPad après la 1re ouverture avec internet.
    Après une modification, augmenter VERSION (ex. ttp-v3 → ttp-v3). */
-const VERSION='tennis-de-table-prof-v18';
+const VERSION='tennis-de-table-prof-v19';
 // Toutes les applis partagent le même stockage (même adresse github.io) : on n'efface QUE les anciennes versions de CETTE appli.
 const MES_CACHES=/^(?:tennis\-de\-table\-prof\-v|ttp\-v)\d+$/;
 

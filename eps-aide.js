@@ -30,6 +30,7 @@ html.epsa-lisible body p,html.epsa-lisible body li{line-height:1.6}
 .epsa-fermer{border:0;background:#1c2128;color:#fff;padding:8px 16px;min-height:44px}
 .epsa-lis{display:flex!important;flex-direction:row!important;margin:0!important;align-items:center;gap:8px;font-size:15px;font-weight:700;padding:4px 0;cursor:pointer}.epsa-lis input{width:22px;height:22px;accent-color:var(--acc,#334155)}
 .epsa-onglets{display:flex;gap:6px;padding:10px 16px;border-bottom:1px solid #dde2e8;flex-wrap:wrap}
+.epsa-onglets[hidden]{display:none}
 .epsa-onglets button{border:1.5px solid #dde2e8;background:#fff;color:#1c2128;padding:6px 16px;min-height:42px}
 .epsa-onglets button.on{background:var(--acc,#334155);border-color:var(--acc,#334155);color:#fff}
 .epsa-corps{overflow:auto;padding:8px 16px 24px;-webkit-overflow-scrolling:touch}
