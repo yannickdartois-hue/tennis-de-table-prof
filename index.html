@@ -212,6 +212,17 @@ table.bil td small{color:var(--repere)}
 .note td{vertical-align:top}
 .note b.tot{font:800 24px/1 var(--d);font-stretch:74%}
 .note .aides{white-space:normal;min-width:220px;text-align:left}
+/* Note compacte : une ligne par élève, détail sur demande */
+.note.compacte td{vertical-align:middle;padding-top:6px;padding-bottom:6px;white-space:nowrap}
+.note.compacte select.nsel{min-width:64px}
+.note .sug{display:inline-block;margin-left:6px;font-size:13px;font-weight:700;color:var(--repere,#5b6470);border:1px dashed currentColor;border-radius:6px;padding:1px 5px;vertical-align:middle}
+.note tr.detnote td{white-space:normal;text-align:left;background:var(--fond-2,#f6f7f9);font-size:15px;line-height:1.5;padding:10px 14px}
+.note tr.ouvert td{border-bottom-color:transparent}
+.note .ndet{min-width:44px;min-height:40px;font-size:16px;border:1px solid var(--ligne,#dde2e8)!important;background:transparent!important;color:var(--repere,#5b6470)!important;box-shadow:none!important}
+details.reglnote>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;list-style:none}
+details.reglnote>summary::before{content:"›";font-size:22px;transition:transform .15s}details.reglnote[open]>summary::before{transform:rotate(90deg)}
+details.reglnote>summary::-webkit-details-marker{display:none}
+.note .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .alerte{margin-top:4px;color:var(--ligne-fonce);font-weight:700}
 label.coche.mini{min-height:38px;padding:4px 10px;margin:0;font-weight:400}
 label.coche.mini input{width:20px;height:20px}

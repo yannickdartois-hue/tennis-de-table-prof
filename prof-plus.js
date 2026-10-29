@@ -111,14 +111,19 @@ function noteEleve(k,R,C){
   const tot=parts.every(v=>v!=null&&v!=='')?r2(parts.reduce((a,v)=>a+(+v),0)):null;
   return {e,rep,res,tot};
 }
+// Lignes dépliées (détail des tours, aides, alertes) : gardées entre deux affichages
+const NOTE_OUVERT=new Set();let NOTE_TOUT=false;
 function vNote(){
   const L=eleves();if(!L.length)return `<h2>Note</h2><p class="muted">Aucune donnée pour cette classe.</p>`;
   const C=cfgNote(),R=resultatsPoules(),T=C.niveau==='T',TN=toursNotes(C);
   const K=[...new Set(poulesClasse().map(p=>p.seance))].sort((a,b)=>a-b);
   const tr=tableRang('',R,C);
+  const resume=(T?'Terminale · victoires dans la poule /4':`Première · table et rang /5 · ${C.P?C.P:tr.P+' (auto)'} tables · M ${fr(C.M)} · m ${fr(C.m)}`)+' · tours notés : '+(TN.length?TN.map(labS).join(', '):'<b>aucun</b>');
+  const nbCol=9;
   return `<h2>Note · ${esc(DB.classe)}</h2>
-  <div class="rangee noprint"><button class="bt orange" type="button" data-act="saisierapide">Saisie rapide, élève par élève</button><span class="small muted">4 gros boutons par critère, − / + pour ajuster, Suivant.</span></div>
-  <section class="carte"><h3>Réglages</h3>
+  <div class="rangee noprint"><button class="bt orange" type="button" data-act="saisierapide">Saisie rapide, élève par élève</button>
+    <button class="bt" type="button" data-ndettout="1">${NOTE_TOUT?'Replier les détails':'Déplier tous les détails'}</button></div>
+  <details class="carte reglnote noprint"${TN.length?'':' open'}><summary><b>Barème</b> <span class="small muted">${resume}</span></summary>
     <div class="grille2">
       <label>Barème <select data-ncfg="niveau"><option value="1"${!T?' selected':''}>Première : table et rang /5</option><option value="T"${T?' selected':''}>Terminale : victoires dans la poule /4</option></select></label>
       ${T?'':`<label>Nombre de tables P <input data-ncfg="P" type="number" min="1" max="20" value="${esc(C.P)}" placeholder="auto : ${tr.P}"></label>
@@ -128,24 +133,37 @@ function vNote(){
     <div class="rangee">${K.length?K.map(x=>`<label class="coche mini"><input type="checkbox" data-ntour="${x}" ${TN.includes(x)?'checked':''}> ${labS(x)}</label>`).join(''):'<span class="muted small">aucune poule reçue</span>'}</div>
     ${T?`<p class="small muted">Victoires dans la poule : 0 = 1 point ; 1 = 2 ; 2 = 3 ; 3 = 4. Moyenne si plusieurs tours sont cochés.</p>`
        :`<p class="small muted">Note d’un tour = M − S × (table − 1) − décote du rang, avec S = (M − m) ÷ P = ${fr(tr.S)}. Décote = S × (rang − 1) ÷ (joueurs − 1), arrondie au 0,05 (groupe de 3 : 0 / 0,2 / 0,4 ; groupe de 4 : 0 / 0,15 / 0,25 / 0,4). Note = moyenne des tours joués.</p>`}
-  </section>
-  <div class="tablewrap"><table class="cl bil note"><thead><tr><th>Élève</th><th>Rép. AFL2/3</th>
-    <th>Technique /${T?4:5}</th><th>${T?'Service /4':'Tactique /2'}</th><th>${T?'Victoires /4':'Table et rang /5'}</th><th>AFL2</th><th>AFL3</th><th>Total /20</th><th>Aides</th></tr></thead><tbody>
-  ${L.map(k=>{const N=noteEleve(k,R,C),I=indicateurs(k,R),A=alertes(k,R,I),e=N.e;
-    const det=N.res.det.map(d=>d.abs?`${labC(d.t)} abs.`:T?`${labC(d.t)} ${d.v} V`:`${labC(d.t)} T${d.table}·${d.rang}/${d.n} = ${fr(d.pts)}`).join('<br>');
-    return `<tr><td><button class="lien" type="button" data-act="fiche" data-k="${esc(k)}">${esc(nomAffiche(k))}</button>${A.length?` <span class="badge st-oubli" title="${esc(A.join(' '))}">⚠</span>`:''}</td>
+  </details>
+  <div class="tablewrap"><table class="cl bil note compacte"><thead><tr><th>Élève</th><th>Rép.</th>
+    <th>Tech. /${T?4:5}</th><th>${T?'Service /4':'Tact. /2'}</th><th>${T?'Vict. /4':'Table /5'}</th><th>AFL2</th><th>AFL3</th><th>/20</th><th class="noprint"><span class="vh">Détail</span></th></tr></thead><tbody>
+  ${L.map(k=>{const N=noteEleve(k,R,C),I=indicateurs(k,R),A=alertes(k,R,I),e=N.e,ouv=NOTE_TOUT||NOTE_OUVERT.has(k);
+    const det=N.res.det.map(d=>d.abs?`${labC(d.t)} abs.`:T?`${labC(d.t)} ${d.v} V`:`${labC(d.t)} T${d.table}·${d.rang}/${d.n} = ${fr(d.pts)}`).join(' · ');
+    const sug=d=>`<span class="sug" title="suggestion tirée des séances">D${d}</span>`;
+    return `<tr class="${ouv?'ouvert':''}"><td><button class="lien" type="button" data-act="fiche" data-k="${esc(k)}">${esc(nomAffiche(k))}</button>${A.length?` <span class="badge st-oubli" title="${esc(A.join(' '))}">⚠</span>`:''}</td>
       <td><select class="nsel" data-note="rep" data-k="${esc(k)}">${Object.keys(REPS).map(r=>`<option${(e.rep||'4/4')===r?' selected':''}>${r}</option>`).join('')}</select></td>
       <td>${selDegres('tech',k,T?4:5,e.tech)}</td>
-      <td>${T?selDegres('serv',k,4,e.serv)+`<br><input class="pct" type="number" min="0" max="100" data-note="servPct" data-k="${esc(k)}" value="${e.servPct==null?'':e.servPct}" placeholder="% 3 frappes" title="Part des points de service gagnés en 3 frappes (relevé de l’observateur)">`:selDegres('tact',k,2,e.tact)}<div class="small muted">${I.pj?`projets ${I.pjOk}/${I.pj} réalisés · ${I.pjDiff} différent${I.pjDiff>1?'s':''}`:'aucun projet annoncé'}${T?'':` · suggestion D${suggestionTactique(I)}`}</div></td>
-      <td><b>${fr(N.res.note)}</b><div class="small muted">${det}</div></td>
-      <td>${selDegres('afl2',k,N.rep[0],e.afl2)}<div class="small muted">sur ${N.rep[0]} · suggestion D${suggestionAFL2(I)}</div></td>
-      <td>${selDegres('afl3',k,N.rep[1],e.afl3)}<div class="small muted">sur ${N.rep[1]} · suggestion D${suggestionAFL3(I)}</div></td>
+      <td>${T?selDegres('serv',k,4,e.serv):selDegres('tact',k,2,e.tact)+sug(suggestionTactique(I))}</td>
+      <td><b>${fr(N.res.note)}</b></td>
+      <td>${selDegres('afl2',k,N.rep[0],e.afl2)}${sug(suggestionAFL2(I))}</td>
+      <td>${selDegres('afl3',k,N.rep[1],e.afl3)}${sug(suggestionAFL3(I))}</td>
       <td><b class="tot">${fr(N.tot)}</b></td>
-      <td class="small aides">${I.recues}/${I.seances} séances · ${I.hauts}/${I.ex} exos vert (${I.hautsV} vérifiés) · ${I.valid} validation${I.valid>1?'s':''} faite${I.valid>1?'s':''} · ${I.mt} MT validé${I.mt>1?'s':''} · ${I.chg} chgt axe · ${I.arb} arbitrage${I.arb>1?'s':''}${I.coach?` · ${I.coach} match${I.coach>1?'s':''} codé${I.coach>1?'s':''} en coach`:''}${I.codes.some(Boolean)?` · codes reçus 0:${I.codes[0]} 1:${I.codes[1]} 2:${I.codes[2]} 3:${I.codes[3]} x:${I.codes[4]}`:''}${I.etDeb!=null?` · étoile AFL1 ${fr(I.etDeb)}${I.etFin!=null?'→'+fr(I.etFin):''}`:''}${A.length?`<div class="alerte">${A.map(esc).join('<br>')}</div>`:''}</td></tr>`}).join('')}
+      <td class="noprint"><button class="bt mini ndet" type="button" data-ndet="${esc(k)}" aria-expanded="${ouv}" title="Détail : tours, projets, aides">${ouv?'▴':'▾'}</button></td></tr>
+      ${ouv?`<tr class="detnote"><td colspan="${nbCol}">
+        <div><b>${T?'Victoires':'Table et rang'}</b> : ${det||'–'}</div>
+        ${T?`<div><b>Service</b> : <input class="pct" type="number" min="0" max="100" data-note="servPct" data-k="${esc(k)}" value="${e.servPct==null?'':e.servPct}" placeholder="%" title="Part des points de service gagnés en 3 frappes (relevé de l’observateur)"> % des points de service gagnés en 3 frappes</div>`:''}
+        <div><b>Projets de jeu</b> : ${I.pj?`${I.pjOk}/${I.pj} réalisés · ${I.pjDiff} différent${I.pjDiff>1?'s':''}`:'aucun projet annoncé'}</div>
+        <div><b>Aides</b> : ${I.recues}/${I.seances} séances · ${I.hauts}/${I.ex} exos vert (${I.hautsV} vérifiés) · ${I.valid} validation${I.valid>1?'s':''} faite${I.valid>1?'s':''} · ${I.mt} MT validé${I.mt>1?'s':''} · ${I.chg} chgt axe · ${I.arb} arbitrage${I.arb>1?'s':''}${I.coach?` · ${I.coach} match${I.coach>1?'s':''} codé${I.coach>1?'s':''} en coach`:''}${I.codes.some(Boolean)?` · codes reçus 0:${I.codes[0]} 1:${I.codes[1]} 2:${I.codes[2]} 3:${I.codes[3]} x:${I.codes[4]}`:''}${I.etDeb!=null?` · étoile AFL1 ${fr(I.etDeb)}${I.etFin!=null?'→'+fr(I.etFin):''}`:''}</div>
+        ${A.length?`<div class="alerte">${A.map(esc).join('<br>')}</div>`:''}</td></tr>`:''}`}).join('')}
   </tbody></table></div>
-  <p class="small muted">Technique, ${T?'service':'tactique'}, AFL2 et AFL3 : c’est toi qui choisis le degré et la note ; les « suggestions » et les aides viennent des séances reçues (assiduité, exercices, matchs à thème, arbitrages) et ne sont qu’un repère. ${T?'Service : seuils 15 / 25 / 35 % des points de service gagnés en 3 frappes, encore à vérifier en S6.':''}</p>
+  <p class="small muted">Tu choisis chaque note ; « D2 » = degré suggéré par les séances reçues, un simple repère. ▾ : détail des tours, projets et aides.${T?' Service : % des points de service gagnés en 3 frappes, dans le détail (seuils 15 / 25 / 35 %).':''}</p>
   <div class="rangee noprint"><button class="bt orange" type="button" data-act="csvnote">Exporter les notes (CSV)</button><button class="bt" type="button" data-act="imprimer">Imprimer</button></div>`;
 }
+document.addEventListener('click',ev=>{
+  const b=ev.target.closest('[data-ndet],[data-ndettout]');if(!b)return;
+  if(b.dataset.ndettout){NOTE_TOUT=!NOTE_TOUT;if(!NOTE_TOUT)NOTE_OUVERT.clear()}
+  else{const k=b.dataset.ndet;if(NOTE_TOUT){NOTE_TOUT=false;eleves().forEach(x=>NOTE_OUVERT.add(x))}NOTE_OUVERT.has(k)?NOTE_OUVERT.delete(k):NOTE_OUVERT.add(k)}
+  const y=window.scrollY;rendre();window.scrollTo(0,y);
+});
 function exporterNotes(){
   const C=cfgNote(),R=resultatsPoules(),T=C.niveau==='T';
   const rows=[['Classe','Élève','Barème','Répartition AFL2/AFL3','Technique',T?'Service':'Tactique',T?'% points de service en 3 frappes':'',T?'Victoires /4':'Table et rang /5','Détail des tours','AFL2','AFL3','Total /20','Alertes']];
