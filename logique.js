@@ -127,7 +127,8 @@ function slug(s){return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').re
 function nomFichier(classe,eleve,seance,suffixe){
   const parts=String(eleve||'').trim().split(/\s+/);
   const prenom=parts[0]||'',nom=parts.slice(1).join(' ');
-  const who=slug(nom?nom:prenom)+(nom?slug(prenom).slice(0,1).toUpperCase():'');
+  // nom + prénom complet : « Léa MARTIN » et « Louis MARTIN » ne doivent pas donner le même fichier (dépôt dans le Nuage)
+  const who=slug(nom?nom:prenom)+(nom?'_'+slug(prenom):'');
   return (slug(classe)||'Classe')+'_'+(who||'Eleve')+'_S'+seance+(suffixe?'_'+suffixe:'')+'.json';
 }
 
