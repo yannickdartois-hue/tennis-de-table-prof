@@ -387,7 +387,7 @@ async function importerListe(files,texte,classeDefaut){
   DB.classe=C[0];sauver();rendre();
 }
 async function qrDemarrage(c){
-  const L=DB.classesL[c],k=await clePublique(),txt=await TTQR.encoder({a:'TTE',v:1,t:'C',c,l:L.eleves,u:L.lien||'',k});
+  const L=DB.classesL[c],k=await clePublique();if(!L.cc){L.cc=EPSCode.nouvelleCle();sauver()}const txt=await TTQR.encoder({a:'TTE',v:1,t:'C',c,l:L.eleves,u:L.lien||'',k,cc:L.cc});
   let svg;try{svg=TTQR.svgQR(txt)}catch(e){svg='<p class="avert">Liste trop longue pour un seul QR.</p>'}
   const d=document.createElement('div');d.className='qr-plein';
   d.innerHTML=`<div><h2>Classe ${esc(c)} · tennis de table</h2><p>Dans l’appli élève : Groupe → « Scanner le QR de la classe »</p><div class="qrbox">${svg}</div><button class="bt noir" type="button">Fermer</button></div>`;
@@ -410,7 +410,7 @@ function vClasses(){
   ${C.length?C.map(c=>{const L=DB.classesL[c];return `<section class="carte"><h3>${esc(c)} <span class="small muted">· ${L.eleves.length} élèves</span></h3>
     <label class="ch">Lien d’envoi en ligne de cette classe (Nuage, « Demande de fichier ») — jamais visible par les élèves</label>
     <input type="url" data-cl="${esc(c)}" class="cl-lien" value="${esc(L.lien)}" placeholder="https://nuage03.apps.education.fr/s/…">
-    <div class="rangee" style="margin-top:10px"><button class="bt orange" type="button" data-act="qrdem" data-v="${esc(c)}">QR de démarrage</button>
+    <div class="rangee" style="margin-top:10px"><button class="bt orange" type="button" data-act="qrdem" data-v="${esc(c)}">QR de démarrage</button><button class="bt" type="button" data-act="codecours" data-v="${esc(c)}">🔑 Code du cours</button>
       <details><summary class="small">Voir la liste</summary><ol class="small">${L.eleves.map(n=>`<li>${esc(n)}</li>`).join('')}</ol></details>
       <button class="bt mini danger" type="button" data-act="clsuppr" data-v="${esc(c)}">Retirer la classe</button></div>
     <p class="small muted">Le QR contient la liste et le lien : si tu les modifies, les groupes rescannent le nouveau QR (Groupe → Changer de classe).</p></section>`}).join(''):'<p class="muted">Aucune classe pour l’instant.</p>'}
@@ -537,6 +537,7 @@ document.addEventListener('click',e=>{
     case 'version':{const id=b.dataset.id,x=DB.poulesAlt[id][+v];DB.poules[id]=Object.assign({},x,{choisi:true});break}
     case 'imprimer':window.print();return;
     case 'qrdem':qrDemarrage(v);return;
+    case 'codecours':{const L=DB.classesL[v];if(!L.cc){L.cc=EPSCode.nouvelleCle();sauver()}EPSCode.prof({app:'ttp',classe:v,cle:L.cc,seances:Array.from({length:9},(_,i)=>({v:String(i+1),n:'Séance '+(i+1)}))});return}
     case 'reprise':qrReprise(b.dataset.k);return;
     case 'clcoller':importerListe([],$('#cl-txt').value,$('#cl-nom').value.trim());return;
     case 'clsuppr':if(!confirm('Retirer la liste de la classe '+v+' ? (Les séances reçues sont gardées.)'))return;delete DB.classesL[v];choisirClasseParDefaut();break;

@@ -1,6 +1,13 @@
 /* aide.js — mode d'emploi de l'outil prof tennis de table (lu par eps-aide.js) */
 window.EPS_AIDE={appli:'Tennis de table · Outil prof',bouton:false,pied:'Toutes les données restent sur cet appareil : pensez à la sauvegarde après chaque import.',publics:[
 {id:'prof',titre:'Professeur',chapitres:[
+{t:'🔑 Code du cours (chaque cours)',html:`<ol>
+<li>Les élèves utilisent leur téléphone : sans verrou, ils pourraient remplir chez eux des séances à l’avance. Le code du cours l’empêche.</li>
+<li>Début de cours : Classes → <span class="bouton">🔑 Code du cours</span>, vérifiez la séance, écrivez les 4 chiffres au tableau.</li>
+<li>Chaque groupe tape le code : la séance du jour s’ouvre sur son téléphone pendant 2 heures. Sans code, l’appli se consulte mais on ne peut rien saisir.</li>
+<li>Le code ne vaut que pour cette séance et ce jour-là. Pour préparer un cours, changez la date : le code s’affiche à l’avance. Aucune connexion nécessaire.</li>
+</ol><p class="astuce">Une seule fois après cette mise à jour : refaites scanner le <b>QR de démarrage</b> (il apporte la clé de la classe). Tant qu’un téléphone ne l’a pas rescanné, il n’est pas verrouillé.</p>`},
+
 {t:'Démarrer (rentrée)',html:`<ol><li><b>Classes</b> : importez l’export Pronote de chaque classe (xlsx, xls, csv, ou liste collée) et collez le lien d’envoi du Nuage (« Demande de fichier »).</li>
 <li>Premier cours : affichez le <b>QR de démarrage</b> ; chaque groupe le scanne dans l’appli élève.</li>
 <li>Installez l’outil sur l’écran d’accueil de l’iPad et faites une <b>sauvegarde</b> après chaque import.</li></ol>`},
