@@ -4,6 +4,8 @@
    QR codes scannés), reconstruit les poules et fait le bilan par élève.
    Données gardées sur cet appareil uniquement (localStorage).
    ===================================================================== */
+const AVT=(n,b,c)=>window.EPSAvatar?EPSAvatar(n,b,c):'';
+
 'use strict';
 const CLEP='tte-prof-v1';
 const $=s=>document.querySelector(s);
@@ -277,7 +279,7 @@ function vFiche(){
     <div class="rangee"><select id="fusion"><option value="">— Choisir —</option>${autres.map(a=>`<option value="${esc(a)}">${esc(nomAffiche(a))}</option>`).join('')}</select><button class="bt mini" type="button" data-act="fusionner">Fusionner dans ${esc(nomAffiche(k))}</button></div></section>`:''}`;
 }
 function vExport(){
-  return `<h2>Exporter pour la note</h2><p class="muted small">Fichiers .csv à ouvrir dans Excel ou LibreOffice (séparateur point-virgule). Classe : ${esc(DB.classe||'—')}.</p>
+  return `<h2>Exporter pour la note</h2>${AVT('tableau','Vérifie les notes avant de les reporter dans Pronote.')}<p class="muted small">Fichiers .csv à ouvrir dans Excel ou LibreOffice (séparateur point-virgule). Classe : ${esc(DB.classe||'—')}.</p>
   <div class="grille2">
     <section class="carte"><h3>Bilan par élève</h3><p class="small muted">Une ligne par élève : classement du cycle, absences, dispenses, matchs, V, D, % de victoires, manches et points gagnés-perdus, poule moyenne, meilleure et dernière poule, rang moyen, exercices, changements d’axe.</p><button class="bt orange" type="button" data-act="csv" data-v="bilan">Télécharger</button></section>
     <section class="carte"><h3>Tournoi séance par séance</h3><p class="small muted">Une ligne par élève et par séance : poule, rang, points, V, D, manches, points.</p><button class="bt noir" type="button" data-act="csv" data-v="tournoi">Télécharger</button></section>
@@ -400,7 +402,7 @@ function rappelArchive(){if(typeof DEMO!=='undefined'&&DEMO)return '';const now=
   return y==null?'':`<section class="carte rappel-archive"><h3>Nouvelle année scolaire</h3><p class="small">L’outil contient encore des séances de ${y}-${y+1}. Archive-les avant d’importer les classes de cette année : la sauvegarde est téléchargée, puis l’outil repart à zéro.</p><button class="bt" type="button" data-act="archiver">Archiver ${y}-${y+1} et repartir à zéro</button></section>`}
 function vClasses(){
   const C=Object.keys(DB.classesL).sort();
-  return `${rappelArchive()}<h2>Classes</h2>
+  return `${!C.length?AVT('prof','Bienvenue ! Commence par importer la liste Pronote de ta classe.'):''}${rappelArchive()}<h2>Classes</h2>
   <section class="carte"><h3>Importer une liste Pronote</h3>
     <p class="small muted">Pronote : liste des élèves de la classe → Exporter (xlsx, xls ou csv). Si le fichier a une colonne « Classe », plusieurs classes peuvent être importées d’un coup. Tu peux aussi coller la liste (un élève par ligne, « NOM Prénom »).</p>
     <div class="grille2"><div><label class="ch" for="cl-nom">Classe (si le fichier ne la donne pas)</label><input id="cl-nom" type="text" placeholder="1G3"></div>
