@@ -80,7 +80,7 @@ function importerObjet(o,source){
     chg:(o.changementsAxe||[]).map(c=>({de:c.de,vers:c.vers,motif:c.motif})),
     ex:(o.exercices||[]).map(e=>({axe:e.axe,n:String(e.exercice),niv:e.niveau||0,rq:e.remarque||'',obs:e.verifiePar||''})),
     bilan:o.bilan||'',disp:!!o.dispense,groupe:o.groupe&&o.groupe.length?o.groupe:null,etoile:o.etoile?o.etoile.map(a=>a.degre||0):null,
-    grille:o.grilleCoach||null,
+    grille:o.grilleCoach||null,g15:o.gestion15||null,
     om:o.observationMatch&&o.observationMatch.synthese?['C','P','S','F','D'].map(k=>o.observationMatch.synthese[k]||0):null,
     pouleResume:o.poule?{num:o.poule.numero,n:o.poule.nbJoueurs,rang:o.poule.rang,pts:o.poule.points,v:o.poule.victoires,d:o.poule.defaites,mv:o.poule.mouvement||''}:null};
   return ajouterRecord(r);
@@ -100,6 +100,7 @@ function importerQR(q){
     bilan:q.b||'',disp:!!q.dp,groupe:q.gr||null,etoile:q.et||null,
     om:q.om||null,
     grille:q.g?{c0:q.g[0],c1:q.g[1],c2:q.g[2],c3:q.g[3],cx:q.g[4],projet:q.pj||'',scoreObserve:q.g[1]+2*q.g[2]+3*q.g[3]}:null,
+    g15:q.gq?{duo:q.gq[0]||'',duel:q.gq[1]||''}:null,
     pouleResume:q.p?{num:q.p[0],n:q.p[1],rang:q.p[2],pts:q.p[3],mv:q.p[5]||'',v:(q.p[6]||[]).filter(m=>m[1]===1).length,d:(q.p[6]||[]).filter(m=>m[1]===0).length}:null};
   const res=ajouterRecord(r);return q.e+' · séance '+q.s+' ('+res+')';
 }
@@ -275,6 +276,7 @@ function vFiche(){
       ${r.chg.map(c=>`<p class="avert small">Changement d’axe non validé : ${esc(COURT[c.de]||c.de)} → ${esc(COURT[c.vers]||c.vers||'aucun')} · « ${esc(c.motif)} »</p>`).join('')}
       ${r.om?(()=>{const [C,P,S,F,D]=r.om,g=C+P+S,n=g+F+D;return n?`<p class="small">Observation de match : ${n} échanges · fautes directes ${Math.round(100*F/n)} % · gagnés en plaçant ou smashant ${g?Math.round(100*(P+S)/g):0} % · ${S} smash${S>1?'s':''} · débordé ${D}</p>`:''})():''}
       ${r.grille?`<p class="small">Grille du coach : score observé ${r.grille.scoreObserve}${r.grille.projet?` · projet : « ${esc(r.grille.projet)} »`:''}</p>`:''}
+      ${r.g15?`<p class="small"><b>Gestion des 15 min</b> · duo : ${esc(r.g15.duo||'—')} · duel : ${esc(r.g15.duel||'—')}</p>`:''}
       ${r.bilan?`<p class="small"><b>Bilan :</b> ${esc(r.bilan)}</p>`:''}</div>`:''}</section>`}).join('')}
   <section class="carte"><h3>QR de reprise</h3><p class="small muted">Si l’élève change de tablette ou si son groupe a oublié son code : ce QR lui rend son étoile, ses axes, ses matchs à thème validés et ses poules (d’après ce qu’il t’a envoyé). Dans son groupe : Mon groupe → « Scanner le QR de l’élève qui arrive ».</p>
     <button class="bt noir" type="button" data-act="reprise" data-k="${esc(k)}">Afficher le QR de reprise</button></section>

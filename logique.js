@@ -147,6 +147,7 @@ function versQR(o){
     if(o.arbitrePoule)q.ap=[o.arbitrePoule.numero,o.arbitrePoule.matchs];
     if(o.etoile)q.et=o.etoile.map(a=>a.degre||0);
     if(o.grilleCoach){const g=o.grilleCoach;q.g=[g.c0,g.c1,g.c2,g.c3,g.cx];if(g.projet)q.pj=cut(g.projet,80)}
+    if(o.gestion15)q.gq=[cut(o.gestion15.duo,100),cut(o.gestion15.duel,100)];
     if(o.observationMatch&&o.observationMatch.synthese){const t=o.observationMatch.synthese;q.om=[t.C,t.P,t.S,t.F,t.D]}
   }
   if(o.poule){const p=o.poule;q.p=[p.numero,p.nbJoueurs,p.rang,p.points,p.termine?1:0,p.mouvement||'',p.matchs.map(m=>[m.contre,m.gagne==null?-1:m.gagne?1:0,m.score]),p.arbitrages]}
