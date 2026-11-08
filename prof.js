@@ -368,6 +368,26 @@ function lireLignes(rows,classeDefaut){
 // Bibliothèques lourdes chargées seulement quand on en a besoin (xlsx : 880 Ko). Elles restent en cache pour le hors ligne.
 function chargerScript(src){return new Promise((ok,ko)=>{if(document.querySelector('script[data-lib="'+src+'"]')){const t=setInterval(()=>{if(src==='xlsx.js'?window.XLSX:window.JSZip){clearInterval(t);ok()}},50);return}
   const e=document.createElement('script');e.src=src;e.dataset.lib=src;e.onload=()=>ok();e.onerror=()=>ko(new Error('Impossible de charger '+src));document.head.appendChild(e)})}
+/* Classe déjà présente : ajouter les élèves du fichier à la liste actuelle, ou remplacer la liste */
+const cleNomL=n=>String(n||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().split(/[\s'’-]+/).filter(Boolean).sort().join(' ');
+function modeListe(C,actuelle,tout){
+  const ex=C.filter(c=>(actuelle(c)||[]).length);if(!ex.length)return Promise.resolve('remplacer');
+  const e=s=>String(s).replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
+  let petit=false;
+  const lignes=ex.map(c=>{const a=actuelle(c),ka=new Set(a.map(cleNomL)),f=[...tout[c].keys()],kf=new Set(f.map(cleNomL));
+    const nv=f.filter(n=>!ka.has(cleNomL(n))).length,abs=a.filter(n=>!kf.has(cleNomL(n))).length;if(f.length<a.length/2)petit=true;
+    return `<li><b>${e(c)}</b> : ${a.length} élève${a.length>1?'s':''} dans l’appli, ${f.length} dans le fichier — ${nv} nouveau${nv>1?'x':''}${abs?`, ${abs} absent${abs>1?'s':''} du fichier`:''}</li>`}).join('');
+  return new Promise(ok=>{const d=document.createElement('div');
+    d.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(15,20,30,.55);display:flex;align-items:center;justify-content:center;padding:16px';
+    const bt=(v,t,s,pri)=>`<button type="button" data-v="${v}" style="display:block;width:100%;text-align:left;min-height:52px;margin:8px 0 0;padding:10px 14px;border-radius:12px;border:0;font:inherit;cursor:pointer;background:${pri?'#1c2128':'#e5e9f0'};color:${pri?'#fff':'#14181f'}"><b>${t}</b><br><span style="font-size:14px;opacity:.85">${s}</span></button>`;
+    d.innerHTML=`<div role="dialog" aria-modal="true" style="background:#fff;color:#14181f;border-radius:16px;max-width:500px;width:100%;max-height:90vh;overflow:auto;padding:18px;font-size:17px;line-height:1.4;box-shadow:0 12px 40px rgba(0,0,0,.3)">
+      <h3 style="margin:0 0 6px;font-size:21px">Cette classe existe déjà</h3><ul style="margin:6px 0;padding-left:20px;font-size:15px">${lignes}</ul>
+      ${bt('ajout','Ajouter ces élèves','Garde la liste actuelle et ajoute seulement les noms nouveaux. Pour un élève arrivé en cours d’année.',petit)}
+      ${bt('remplacer','Remplacer la liste','La liste devient celle du fichier. Un élève absent du fichier garde ses résultats, mais passe « Hors liste ».',!petit)}
+      ${bt('','Annuler','Ne rien changer.',false)}</div>`;
+    d.addEventListener('click',ev=>{const b=ev.target.closest('button[data-v]');if(!b)return;d.remove();ok(b.dataset.v||null)});
+    document.body.appendChild(d)})}
+function fusionListe(t,anciens){const vus=new Set([...t.keys()].map(cleNomL));(anciens||[]).forEach(n=>{if(!vus.has(cleNomL(n))){t instanceof Map?t.set(n,''):t.add(n)}})}
 async function importerListe(files,texte,classeDefaut){
   let lots=[];
   if(files&&files.length&&!window.XLSX)await chargerScript('xlsx.js');
@@ -389,8 +409,11 @@ async function importerListe(files,texte,classeDefaut){
   const C=Object.keys(tout);
   if(!C.length){alert(classeDefaut?'Aucun nom trouvé dans ce fichier.':'Aucun élève trouvé. Il faut une colonne « Classe », ou bien écrire le nom de la classe avant d’importer.');return}
   if(rates.length)alert('Aucun élève lu dans : '+rates.join(', ')+'.\nLes autres fichiers sont importés. Vérifie la colonne « Classe » ou importe ce fichier seul en écrivant le nom de la classe.');
+  const avant={};C.forEach(c=>avant[c]=((DB.classesL[c]||{}).eleves||[]).slice());
+  const mode=await modeListe(C,c=>avant[c],tout);if(!mode)return;
+  if(mode==='ajout')C.forEach(c=>fusionListe(tout[c],avant[c]));
   C.forEach(c=>{const old=DB.classesL[c]||{lien:''};DB.classesL[c]={eleves:[...tout[c]].sort(triNom),lien:old.lien||''}});
-  journal('Listes importées : '+C.map(c=>c+' ('+tout[c].size+')').join(', '));
+  journal('Listes importées : '+C.map(c=>c+' ('+tout[c].size+')').join(', '));if(mode==='ajout'){const r=C.map(c=>{const ka=new Set(avant[c].map(cleNomL)),nv=[...tout[c].keys()].filter(n=>!ka.has(cleNomL(n)));return c+' : '+(nv.length?'+'+nv.length+' ('+nv.join(', ')+')':'aucun nouveau nom')+' → '+tout[c].size+' élèves'});setTimeout(()=>alert('Élèves ajoutés\n'+r.join('\n')+'\n\nPense à refaire scanner le QR de démarrage aux groupes de cette classe.'),50)}
   DB.classe=C[0];sauver();rendre();
 }
 async function qrDemarrage(c){
