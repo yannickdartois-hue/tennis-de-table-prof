@@ -396,7 +396,7 @@ async function importerListe(files,texte,classeDefaut){
     if(/\.(csv|txt)$/i.test(f.name)||/text|csv/.test(f.type)){
       // CSV : UTF-8 (LibreOffice, Google Sheets, Mac) sinon Windows-1252 (Excel Windows)
       let t;try{t=new TextDecoder('utf-8',{fatal:true}).decode(buf)}catch(e){t=new TextDecoder('windows-1252').decode(buf)}
-      t=t.replace(/^\uFEFF/,'');const sep=(t.split(/\r?\n/)[0].match(/;/g)||[]).length>=(t.split(/\r?\n/)[0].match(/,/g)||[]).length?';':',';
+      t=t.replace(/^\uFEFF/,'');const sep=['\t',';',','].map(c=>[c,t.split(/\r?\n/)[0].split(c).length]).sort((a,b)=>b[1]-a[1])[0][0];
       wb=XLSX.read(t,{type:'string',FS:sep});
     }else wb=XLSX.read(buf,{type:'array'});
     const avant=lots.length;
