@@ -360,7 +360,7 @@ function lireLignes(rows,classeDefaut){
     else if(iEl>=0)n=decouperNom(r[iEl]);
     else if(hi<0)n=decouperNom(r[0]);
     if(!n||/^(total|effectif)/i.test(n))return;
-    const c=(iCl>=0&&r[iCl])||classeDefaut;if(!c)return;
+    const c=classeDefaut||(iCl>=0&&r[iCl]);if(!c)return; /* nom écrit = groupe : remplace la classe Pronote (groupes de Terminale) */
     (out[c]=out[c]||new Set()).add(n.trim());
   });
   return out;
@@ -433,7 +433,7 @@ function vClasses(){
   return `${!C.length?AVT('prof','Bienvenue ! Commence par importer la liste Pronote de ta classe.'):''}${rappelArchive()}<h2>Classes</h2>
   <section class="carte"><h3>Importer une liste Pronote</h3>
     <p class="small muted">Pronote : liste des élèves de la classe → Exporter (xlsx, xls ou csv). Si le fichier a une colonne « Classe », plusieurs classes peuvent être importées d’un coup. Tu peux aussi coller la liste (un élève par ligne, « NOM Prénom »).</p>
-    <div class="grille2"><div><label class="ch" for="cl-nom">Classe (si le fichier ne la donne pas)</label><input id="cl-nom" type="text" placeholder="1G3"></div>
+    <div class="grille2"><div><label class="ch" for="cl-nom">Classe ou groupe (rempli : remplace la classe Pronote du fichier, ex. groupe de Terminale)</label><input id="cl-nom" type="text" placeholder="1G3"></div>
     <div><label class="ch">Fichier</label><label class="bt noir" for="cl-fic">Choisir le fichier Pronote</label><input id="cl-fic" type="file" accept=".xlsx,.xls,.csv,.ods,.txt" hidden multiple></div></div>
     <label class="ch" for="cl-txt">Ou coller la liste</label><textarea id="cl-txt" rows="4" placeholder="DUPONT Marie&#10;MARTIN Léo"></textarea>
     <div class="rangee" style="margin-top:8px"><button class="bt mini" type="button" data-act="clcoller">Importer la liste collée</button></div></section>
