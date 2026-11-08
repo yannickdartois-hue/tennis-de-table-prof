@@ -566,7 +566,7 @@ document.addEventListener('change',async e=>{
   if(t.classList&&t.classList.contains('cl-lien')){const c=t.dataset.cl,u=t.value.trim();if(u&&!/^https:\/\//.test(u)){alert('Le lien doit commencer par https://');return}DB.classesL[c].lien=u;sauver()}
   if(window.PLUS&&PLUS.change&&PLUS.change(t))return;
   if(t.dataset&&t.dataset.appel!=null){const id=norm(DB.classe)+'|'+DB.seance+'|'+t.dataset.appel;if(t.value)DB.appel[id]=t.value;else delete DB.appel[id];sauver();rendre()}
-  if(t.id==='resto'&&t.files[0]){try{const o=JSON.parse(await t.files[0].text());if(!o.ttProf)throw 0;if(!confirm('Remplacer les données de cet appareil par cette sauvegarde ?'))return;delete o.ttProf;DB=Object.assign(vide(),o);sauver();rendre()}catch(x){alert('Ce fichier n’est pas une sauvegarde de l’outil prof.')}}
+  if(t.id==='resto'&&t.files[0]){try{const o=JSON.parse(await EPSCoffre.lireFichier(t.files[0]));if(!o.ttProf)throw 0;if(!confirm('Remplacer les données de cet appareil par cette sauvegarde ?'))return;delete o.ttProf;DB=Object.assign(vide(),o);sauver();rendre()}catch(x){alert('Ce fichier n’est pas une sauvegarde de l’outil prof.')}}
 });
 ['dragover','drop'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();if(ev==='drop'&&e.dataTransfer.files.length){const F=[...e.dataTransfer.files];if(DB.vue==='classes')importerListe(F,'',($('#cl-nom')||{}).value||'');else{DB.vue='import';importerFichiers(F)}}}));
 choisirClasseParDefaut();rendre();
