@@ -417,7 +417,7 @@ async function importerListe(files,texte,classeDefaut){
   DB.classe=C[0];sauver();rendre();
 }
 async function qrDemarrage(c){
-  const L=DB.classesL[c],k=await clePublique();if(!L.cc){L.cc=EPSCode.nouvelleCle();sauver()}const txt=await TTQR.encoder({a:'TTE',v:1,t:'C',c,l:L.eleves,u:L.lien||'',k,cc:L.cc});
+  const L=DB.classesL[c],k=await clePublique();if(!L.cc){L.cc=EPSCode.nouvelleCle();sauver()}const txt=await TTQR.encoder({a:'TTE',v:1,t:'C',c,l:L.eleves,u:L.lien||'',k,cc:L.cc,cj:await EPSCode.cjDuJour('ttp',c,L.cc)});
   let svg;try{svg=TTQR.svgQR(txt)}catch(e){svg='<p class="avert">Liste trop longue pour un seul QR.</p>'}
   const d=document.createElement('div');d.className='qr-plein';
   d.innerHTML=`<div><h2>Classe ${esc(c)} · tennis de table</h2><p>Dans l’appli élève : Groupe → « Scanner le QR de la classe »</p><div class="qrbox">${svg}</div><button class="bt noir" type="button">Fermer</button></div>`;
