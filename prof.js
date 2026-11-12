@@ -74,6 +74,7 @@ function importerObjet(o,source){
   if(o.poule&&o.poule.brut)ajouterPoule(o.classe,o.seance,o.poule.brut,ts);
   if(o.arbitrePoule&&o.arbitrePoule.brut)ajouterPoule(o.classe,o.seance,o.arbitrePoule.brut,ts);
   (o.tours||[]).forEach(t=>{if(t&&t.brut)ajouterPoule(o.classe,o.seance+'.'+t.tour,t.brut,ts)});
+  if(o.type==='sce'){if(!window.G6P)throw new Error('Table de SCE : module GAREEPS 2026 absent');return 'SCE '+o.sce+' table '+o.table+' ('+G6P.depuisFichier(o)+')'}
   if(o.type==='poule')return 'poule '+(o.poule?o.poule.numero:'');
   const r={classe:o.classe||'',eleve:o.eleve,seance:+o.seance,date:o.date,ts,src:'fichier',
     axes:(o.axes||[]).map(a=>({k:a.axe,val:!!a.valideAujourdhui})),
@@ -82,7 +83,8 @@ function importerObjet(o,source){
     bilan:o.bilan||'',disp:!!o.dispense,groupe:o.groupe&&o.groupe.length?o.groupe:null,etoile:o.etoile?o.etoile.map(a=>a.degre||0):null,
     grille:o.grilleCoach||null,g15:o.gestion15||null,
     om:o.observationMatch&&o.observationMatch.synthese?['C','P','S','F','D'].map(k=>o.observationMatch.synthese[k]||0):null,
-    pouleResume:o.poule?{num:o.poule.numero,n:o.poule.nbJoueurs,rang:o.poule.rang,pts:o.poule.points,v:o.poule.victoires,d:o.poule.defaites,mv:o.poule.mouvement||''}:null};
+    pouleResume:o.poule?{num:o.poule.numero,n:o.poule.nbJoueurs,rang:o.poule.rang,pts:o.poule.points,v:o.poule.victoires,d:o.poule.defaites,mv:o.poule.mouvement||''}:null,
+    g26:o.g26||null};
   return ajouterRecord(r);
 }
 // QR code (format compact)
@@ -93,6 +95,7 @@ function importerQR(q){
   if(q.t==='T')throw new Error('C’est un QR de changement de groupe (pour un téléphone élève).');
   if(q.t==='P'){const pp=q.p.length>=5?q.p:[q.p[0],q.p[1],q.p[2],'',q.p[3]];const [num,fmt,joueurs,arbDisp,ms]=pp;ajouterPoule(q.c,q.s,{num,fmt,joueurs,arbDisp,matchs:ms.map(([a,b,arb,f,sets,pj,pjok,co])=>({a,b,arb,f:f||null,m:sets,pj:pj||null,pjok:pjok||null,co:co?{a:co[0],b:co[1]}:null}))},ts);return 'Poule '+num+' · séance '+q.s}
   if(q.t==='p')return q.e+' : poule seulement';
+  if(q.t==='S'){if(!window.G6P)throw new Error('QR de SCE : module GAREEPS 2026 absent');return 'SCE '+q.n+' · table '+q.tb+' ('+G6P.depuisQR(q)+')'}
   const r={classe:q.c||'',eleve:q.e,seance:+q.s,date:q.d,ts,src:'qr',
     axes:(q.x||[]).map(([k,v])=>({k,val:!!v})),
     chg:(q.ch||[]).map(([de,vers,motif])=>({de,vers,motif})),
@@ -101,7 +104,8 @@ function importerQR(q){
     om:q.om||null,
     grille:q.g?{c0:q.g[0],c1:q.g[1],c2:q.g[2],c3:q.g[3],cx:q.g[4],projet:q.pj||'',scoreObserve:q.g[1]+2*q.g[2]+3*q.g[3]}:null,
     g15:q.gq?{duo:q.gq[0]||'',duel:q.gq[1]||''}:null,
-    pouleResume:q.p?{num:q.p[0],n:q.p[1],rang:q.p[2],pts:q.p[3],mv:q.p[5]||'',v:(q.p[6]||[]).filter(m=>m[1]===1).length,d:(q.p[6]||[]).filter(m=>m[1]===0).length}:null};
+    pouleResume:q.p?{num:q.p[0],n:q.p[1],rang:q.p[2],pts:q.p[3],mv:q.p[5]||'',v:(q.p[6]||[]).filter(m=>m[1]===1).length,d:(q.p[6]||[]).filter(m=>m[1]===0).length}:null,
+    g26:q.g6&&window.G6P?G6P.g6DepuisQR(q.g6):null};
   const res=ajouterRecord(r);return q.e+' · séance '+q.s+' ('+res+')';
 }
 async function importerFichiers(files){
@@ -190,9 +194,11 @@ const famCl=k=>{const a=axe(k);return a?{AFL1:'a1',AFL2:'a2',AFL3:'a3'}[a.afl]:'
 function rendre(){
   const C=classes();
   $('#classes').innerHTML=C.length?`<label class="small">Classe <select id="selClasse">${C.map(c=>`<option${c===DB.classe?' selected':''}>${esc(c||'(sans classe)')}</option>`).join('')}</select></label>`:'';
-  const O=[['classes','Classes'],['import','Importer'],['appel','Appel'],['tournoi','Tournoi'],['pilotage','Pilotage'],['eleves','Élèves'],['note','Note'],['export','Exporter']];
+  const g6=!!(window.G6P&&G6P.estG26(Object.keys(DB.classesL).find(x=>norm(x)===norm(DB.classe))));
+  const O=[['classes','Classes'],['import','Importer'],['appel','Appel'],['tournoi','Tournoi']].concat(g6?[['g26','GAREEPS']]:[],[['pilotage','Pilotage'],['eleves','Élèves'],['note','Note'],['export','Exporter']]);
+  if(DB.vue==='g26'&&!g6)DB.vue='eleves';
   $('#onglets').innerHTML=O.map(o=>`<button type="button" data-act="vue" data-v="${o[0]}" class="${DB.vue===o[0]?'ici':''}">${o[1]}</button>`).join('');
-  const V={note:()=>window.vNote?vNote():'',pilotage:()=>window.vPilotage?vPilotage():'',classes:vClasses,appel:vAppel,import:vImport,tournoi:vTournoi,eleves:vEleves,export:vExport,fiche:vFiche};
+  const V={g26:()=>window.G6P?G6P.vG26():'',note:()=>window.vNote?vNote():'',pilotage:()=>window.vPilotage?vPilotage():'',classes:vClasses,appel:vAppel,import:vImport,tournoi:vTournoi,eleves:vEleves,export:vExport,fiche:vFiche};
   $('#main').innerHTML=bandeauSauvegarde()+V[DB.vue]();
 }
 function vImport(){
@@ -263,6 +269,7 @@ function vFiche(){
   <h2>${esc(nomAffiche(k))}</h2>
   <div class="chiffres"><div><b>${t.matchs}</b>matchs</div><div><b>${t.v}-${t.d}</b>V-D</div><div><b>${t.pctV==null?'–':t.pctV+'%'}</b>victoires</div><div><b>${t.complet?t.mg+'-'+t.mp:'–'}</b>manches</div><div><b>${t.complet?t.pg+'-'+t.pp:'–'}</b>points</div><div><b>${t.pouleMoy==null?'–':String(t.pouleMoy).replace('.',',')}</b>poule moy.</div><div><b>${CC?CC.place:'–'}</b>classement${CC?` (moy. ${String(CC.moy).replace('.',',')})`:''}</div></div>
   ${window.PLUS&&PLUS.fiche?PLUS.fiche(k,R):''}
+  ${window.G6P?G6P.ficheG26(k):''}
   ${t.etDebut?`<section class="carte"><h3>Étoile</h3>${etoile(t.etDebut,'Début')}${etoile(t.etFin,'Fin')}</section>`:''}
   ${t.mtValides.length?`<p><b>Matchs à thème validés :</b> ${t.mtValides.map(a=>`<span class="fam ${famCl(a)}">${esc(COURT[a]||a)}</span>`).join(' ')}</p>`:''}
   ${S.map(s=>{const p=x[s],r=recs.find(y=>y.seance===s);
@@ -417,7 +424,9 @@ async function importerListe(files,texte,classeDefaut){
   DB.classe=C[0];sauver();rendre();
 }
 async function qrDemarrage(c){
-  const L=DB.classesL[c],k=await clePublique();if(!L.cc){L.cc=EPSCode.nouvelleCle();sauver()}const txt=await TTQR.encoder({a:'TTE',v:1,t:'C',c,l:L.eleves,u:L.lien||'',k,cc:L.cc,cj:await EPSCode.cjDuJour('ttp',c,L.cc)});
+  const L=DB.classesL[c],k=await clePublique();if(!L.cc){L.cc=EPSCode.nouvelleCle();sauver()}const q={a:'TTE',v:1,t:'C',c,l:L.eleves,u:L.lien||'',k,cc:L.cc,cj:await EPSCode.cjDuJour('ttp',c,L.cc)};
+  if(window.G6P&&G6P.estG26(c)){q.pa='g26';q.pal=G6P.palDe(c);const h=G6P.histoire(c);if(Object.keys(h).length)q.h=h} // parcours GAREEPS 2026
+  const txt=await TTQR.encoder(q);
   let svg;try{svg=TTQR.svgQR(txt)}catch(e){svg='<p class="avert">Liste trop longue pour un seul QR.</p>'}
   const d=document.createElement('div');d.className='qr-plein';
   d.innerHTML=`<div><h2>Classe ${esc(c)} · tennis de table</h2><p>Dans l’appli élève : Groupe → « Scanner le QR de la classe »</p><div class="qrbox">${svg}</div><button class="bt noir" type="button">Fermer</button></div>`;
@@ -440,6 +449,7 @@ function vClasses(){
   ${C.length?C.map(c=>{const L=DB.classesL[c];return `<section class="carte"><h3>${esc(c)} <span class="small muted">· ${L.eleves.length} élèves</span></h3>
     <label class="ch">Lien d’envoi en ligne de cette classe (Nuage, « Demande de fichier ») — jamais visible par les élèves</label>
     <input type="url" data-cl="${esc(c)}" class="cl-lien" value="${esc(L.lien)}" placeholder="https://nuage03.apps.education.fr/s/…">
+    ${window.G6P?G6P.reglage(c):''}
     <div class="rangee" style="margin-top:10px"><button class="bt orange" type="button" data-act="qrdem" data-v="${esc(c)}">QR de démarrage</button><button class="bt" type="button" data-act="codecours" data-v="${esc(c)}">🔑 Code du cours</button>
       <details><summary class="small">Voir la liste</summary><ol class="small">${L.eleves.map(n=>`<li>${esc(n)}</li>`).join('')}</ol></details>
       <button class="bt mini danger" type="button" data-act="clsuppr" data-v="${esc(c)}">Retirer la classe</button></div>

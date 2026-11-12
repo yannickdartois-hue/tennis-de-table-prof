@@ -47,3 +47,6 @@ Pilotage → « Poules du jour » : proposition à partir d'une séance (1er mon
 
 ## Test automatique (avant chaque mise en ligne)
 `tests/circuit.js` rejoue le circuit sur une classe fictive : import CSV, conflit de scores, tournoi du cycle, saisie rapide des notes, exports, code élève et anti-essais, hors ligne des 3 applis, débordements (téléphone, iPad, Galaxy Tab), cibles tactiles. Mode d'emploi en tête du fichier.
+
+## Parcours GAREEPS 2026 (12/11/2026)
+Classes → « Parcours de la classe » : Étoile 7 axes (actuel) ou GAREEPS 2026. Paliers du polygone réglables. Onglet **GAREEPS** : polygones des SCE 1 à 3, choix, meilleur degré par SRP, ateliers STOM validés, tables reçues et élèves sans table. Le QR de démarrage apporte aux téléphones les polygones et choix déjà reçus : le refaire scanner au début des SCE n°2 et n°3. Fichiers : `prof-gareeps26.js`, `donnees-g26.js` (identique dans l'appli élève).

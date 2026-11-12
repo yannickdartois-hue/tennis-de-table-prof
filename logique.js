@@ -149,6 +149,7 @@ function versQR(o){
     if(o.grilleCoach){const g=o.grilleCoach;q.g=[g.c0,g.c1,g.c2,g.c3,g.cx];if(g.projet)q.pj=cut(g.projet,80)}
     if(o.gestion15)q.gq=[cut(o.gestion15.duo,100),cut(o.gestion15.duel,100)];
     if(o.observationMatch&&o.observationMatch.synthese){const t=o.observationMatch.synthese;q.om=[t.C,t.P,t.S,t.F,t.D]}
+    if(o.g26)q.g6=[(o.g26.srp||[]).map(x=>[x.k,cut(x.adv,40),cut(x.obs,40),x.srv,x.b,cut(x.tm,90)]),(o.g26.stom||[]).map(y=>[y.k,y.at,y.nv,y.e,y.ok])]; // parcours GAREEPS 2026
   }
   if(o.poule){const p=o.poule;q.p=[p.numero,p.nbJoueurs,p.rang,p.points,p.termine?1:0,p.mouvement||'',p.matchs.map(m=>[m.contre,m.gagne==null?-1:m.gagne?1:0,m.score]),p.arbitrages]}
   return q;
