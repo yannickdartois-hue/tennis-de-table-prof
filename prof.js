@@ -444,6 +444,7 @@ function vClasses(){
       <details><summary class="small">Voir la liste</summary><ol class="small">${L.eleves.map(n=>`<li>${esc(n)}</li>`).join('')}</ol></details>
       <button class="bt mini danger" type="button" data-act="clsuppr" data-v="${esc(c)}">Retirer la classe</button></div>
     <p class="small muted">Le QR contient la liste et le lien : si tu les modifies, les groupes rescannent le nouveau QR (Groupe → Changer de classe).</p></section>`}).join(''):'<p class="muted">Aucune classe pour l’instant.</p>'}
+<section class="carte"><h3>🔑 Un groupe a oublié son code</h3><ol class="small"><li>Le groupe touche « Code oublié ? » puis supprime son carnet : il ne peut pas être rouvert.</li><li>Il crée un nouveau groupe (mêmes élèves, nouveau code à noter).</li><li>Ici : <b>Élèves</b> → fiche de chaque élève → <b>« Afficher le QR de reprise »</b> ; le groupe le scanne (Mon groupe → « Scanner le QR de l’élève qui arrive »).</li></ol><p class="small muted">Ce qui n’avait pas été envoyé est perdu.</p></section>
   <section class="carte"><h3>Fin d’année</h3><p class="small muted">Télécharge une sauvegarde complète, puis vide l’outil pour la rentrée suivante.</p><button class="bt mini danger" type="button" data-act="archiver">Archiver l’année et repartir à zéro</button></section>`;
 }
 function vAppel(){
