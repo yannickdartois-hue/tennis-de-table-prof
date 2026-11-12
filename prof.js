@@ -74,6 +74,7 @@ function importerObjet(o,source){
   if(o.poule&&o.poule.brut)ajouterPoule(o.classe,o.seance,o.poule.brut,ts);
   if(o.arbitrePoule&&o.arbitrePoule.brut)ajouterPoule(o.classe,o.seance,o.arbitrePoule.brut,ts);
   (o.tours||[]).forEach(t=>{if(t&&t.brut)ajouterPoule(o.classe,o.seance+'.'+t.tour,t.brut,ts)});
+  if(o.type==='atp'){if(!window.ATPP)throw new Error('Tournoi ATP : module absent');return ATPP.depuisFichier(o)}
   if(o.type==='sce'){if(!window.G6P)throw new Error('Table de SCE : module GAREEPS 2026 absent');return 'SCE '+o.sce+' table '+o.table+' ('+G6P.depuisFichier(o)+')'}
   if(o.type==='poule')return 'poule '+(o.poule?o.poule.numero:'');
   const r={classe:o.classe||'',eleve:o.eleve,seance:+o.seance,date:o.date,ts,src:'fichier',
@@ -95,6 +96,7 @@ function importerQR(q){
   if(q.t==='T')throw new Error('C’est un QR de changement de groupe (pour un téléphone élève).');
   if(q.t==='P'){const pp=q.p.length>=5?q.p:[q.p[0],q.p[1],q.p[2],'',q.p[3]];const [num,fmt,joueurs,arbDisp,ms]=pp;ajouterPoule(q.c,q.s,{num,fmt,joueurs,arbDisp,matchs:ms.map(([a,b,arb,f,sets,pj,pjok,co])=>({a,b,arb,f:f||null,m:sets,pj:pj||null,pjok:pjok||null,co:co?{a:co[0],b:co[1]}:null}))},ts);return 'Poule '+num+' · séance '+q.s}
   if(q.t==='p')return q.e+' : poule seulement';
+  if(q.t==='A'){if(!window.ATPP)throw new Error('QR ATP : module absent');return ATPP.depuisQR(q)}
   if(q.t==='S'){if(!window.G6P)throw new Error('QR de SCE : module GAREEPS 2026 absent');return 'SCE '+q.n+' · table '+q.tb+' ('+G6P.depuisQR(q)+')'}
   const r={classe:q.c||'',eleve:q.e,seance:+q.s,date:q.d,ts,src:'qr',
     axes:(q.x||[]).map(([k,v])=>({k,val:!!v})),
@@ -195,10 +197,10 @@ function rendre(){
   const C=classes();
   $('#classes').innerHTML=C.length?`<label class="small">Classe <select id="selClasse">${C.map(c=>`<option${c===DB.classe?' selected':''}>${esc(c||'(sans classe)')}</option>`).join('')}</select></label>`:'';
   const g6=!!(window.G6P&&G6P.estG26(Object.keys(DB.classesL).find(x=>norm(x)===norm(DB.classe))));
-  const O=[['classes','Classes'],['import','Importer'],['appel','Appel'],['tournoi','Tournoi']].concat(g6?[['g26','GAREEPS']]:[],[['pilotage','Pilotage'],['eleves','Élèves'],['note','Note'],['export','Exporter']]);
-  if(DB.vue==='g26'&&!g6)DB.vue='eleves';
+  const O=[['classes','Classes'],['import','Importer'],['appel','Appel'],['tournoi','Tournoi']].concat(g6?[['g26','GAREEPS'],['atp','ATP']]:[],[['pilotage','Pilotage'],['eleves','Élèves'],['note','Note'],['export','Exporter']]);
+  if((DB.vue==='g26'||DB.vue==='atp')&&!g6)DB.vue='eleves';
   $('#onglets').innerHTML=O.map(o=>`<button type="button" data-act="vue" data-v="${o[0]}" class="${DB.vue===o[0]?'ici':''}">${o[1]}</button>`).join('');
-  const V={g26:()=>window.G6P?G6P.vG26():'',note:()=>window.vNote?vNote():'',pilotage:()=>window.vPilotage?vPilotage():'',classes:vClasses,appel:vAppel,import:vImport,tournoi:vTournoi,eleves:vEleves,export:vExport,fiche:vFiche};
+  const V={atp:()=>window.ATPP?ATPP.vATP():'',g26:()=>window.G6P?G6P.vG26():'',note:()=>window.vNote?vNote():'',pilotage:()=>window.vPilotage?vPilotage():'',classes:vClasses,appel:vAppel,import:vImport,tournoi:vTournoi,eleves:vEleves,export:vExport,fiche:vFiche};
   $('#main').innerHTML=bandeauSauvegarde()+V[DB.vue]();
 }
 function vImport(){
@@ -425,7 +427,7 @@ async function importerListe(files,texte,classeDefaut){
 }
 async function qrDemarrage(c){
   const L=DB.classesL[c],k=await clePublique();if(!L.cc){L.cc=EPSCode.nouvelleCle();sauver()}const q={a:'TTE',v:1,t:'C',c,l:L.eleves,u:L.lien||'',k,cc:L.cc,cj:await EPSCode.cjDuJour('ttp',c,L.cc)};
-  if(window.G6P&&G6P.estG26(c)){q.pa='g26';q.pal=G6P.palDe(c);const h=G6P.histoire(c);if(Object.keys(h).length)q.h=h} // parcours GAREEPS 2026
+  if(window.G6P&&G6P.estG26(c)){q.pa='g26';q.pal=G6P.palDe(c);const h=G6P.histoire(c);if(Object.keys(h).length)q.h=h;if(DB.gristATP)q.gr=DB.gristATP;const at=window.ATPP&&ATPP.pourQR(c);if(at)q.atp=at} // parcours GAREEPS 2026
   const txt=await TTQR.encoder(q);
   let svg;try{svg=TTQR.svgQR(txt)}catch(e){svg='<p class="avert">Liste trop longue pour un seul QR.</p>'}
   const d=document.createElement('div');d.className='qr-plein';
@@ -446,6 +448,7 @@ function vClasses(){
     <div><label class="ch">Fichier</label><label class="bt noir" for="cl-fic">Choisir le fichier Pronote</label><input id="cl-fic" type="file" accept=".xlsx,.xls,.csv,.ods,.txt" hidden multiple></div></div>
     <label class="ch" for="cl-txt">Ou coller la liste</label><textarea id="cl-txt" rows="4" placeholder="DUPONT Marie&#10;MARTIN Léo"></textarea>
     <div class="rangee" style="margin-top:8px"><button class="bt mini" type="button" data-act="clcoller">Importer la liste collée</button></div></section>
+  ${window.ATPP&&C.some(c=>DB.classesL[c].pa==='g26')?ATPP.reglage():''}
   ${C.length?C.map(c=>{const L=DB.classesL[c];return `<section class="carte"><h3>${esc(c)} <span class="small muted">· ${L.eleves.length} élèves</span></h3>
     <label class="ch">Lien d’envoi en ligne de cette classe (Nuage, « Demande de fichier ») — jamais visible par les élèves</label>
     <input type="url" data-cl="${esc(c)}" class="cl-lien" value="${esc(L.lien)}" placeholder="https://nuage03.apps.education.fr/s/…">

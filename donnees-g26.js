@@ -133,6 +133,23 @@ const G26={
   rot:[[0,1,2,3],[2,3,0,1],[0,2,1,3],[1,3,0,2]],
   balles:12
 };
+// Tournoi ATP (règlement d'Arnaud Boissière) : points du vainqueur selon l'écart de rang au classement de début de séance.
+G26.atp={
+  // vainqueur classé k rangs SOUS l'adversaire (il bat un mieux classé) : k=1..5+ ; k<0 : il bat un moins bien classé
+  dessus:[3.5,4,4.5,5,5.5],dessous:[3,2.5,2,1.5,1],perdu:0.5,refus:-2,maxMemeAdv:2,points:11,
+  table:'ATP_Matchs'
+};
+// Points du vainqueur : rW, rL = rangs (1 = premier) au début de la séance
+G26.atpGain=(rW,rL)=>{const d=rW-rL;if(d>0)return G26.atp.dessus[Math.min(d,5)-1];if(d<0)return G26.atp.dessous[Math.min(-d,5)-1];return G26.atp.dessous[0]};
+// Nom court pour Grist (RGPD) : « Léa M. ». Les mots en MAJUSCULES sont le nom de famille.
+G26.court=n=>{const w=String(n||'').trim().split(/\s+/).filter(Boolean);if(w.length<2)return w.join('');
+  let nom=w.filter(x=>x.length>1&&x===x.toUpperCase()&&/[A-ZÀ-Ý]/.test(x));if(!nom.length||nom.length===w.length)nom=[w[w.length-1]];
+  const pre=w.filter(x=>!nom.includes(x));return pre.join(' ')+' '+nom[0][0].toUpperCase()+'.'};
+// Noms courts uniques dans une classe (« Léa M. », sinon « Léa MA. »)
+G26.courts=L=>{const m={},cnt={};L.forEach(n=>{const c=G26.court(n);cnt[c]=(cnt[c]||0)+1});
+  L.forEach(n=>{let c=G26.court(n);if(cnt[c]>1){const w=String(n).trim().split(/\s+/),nom=w.find(x=>x.length>1&&x===x.toUpperCase())||w[w.length-1];c=c.replace(/ .\.$/,' '+nom.slice(0,3).toUpperCase()+'.')}m[n]=c});return m};
+// Classement ATP : points cumulés (objet nom → points), égalité départagée par l'ordre de la liste
+G26.rangs=(L,pts)=>{const o=L.map((n,i)=>({n,i,p:+((pts||{})[n]||0)})).sort((a,b)=>b.p-a.p||a.i-b.i),r={};o.forEach((x,k)=>r[x.n]=k+1);return r};
 G26.brK=Object.fromEntries(G26.br.map(b=>[b.k,b]));
 // Score parlant d'un match de SRP et son degré
 G26.degre=s=>s>=G26.degres[2]?4:s>=G26.degres[1]?3:s>=G26.degres[0]?2:1;
