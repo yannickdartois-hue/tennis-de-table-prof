@@ -68,8 +68,8 @@ let AUTO=null,GRAND=false;
 function tableau(c,s,K,grand){
   const ord=K.noms.slice().sort((x,y)=>K.rangT[x]-K.rangT[y]);
   const fl=n=>{const d=K.rangD[n]-K.rangT[n];return d>0?`<span style="color:var(--vert)">▲${d}</span>`:d<0?`<span style="color:var(--alerte)">▼${-d}</span>`:'='};
-  return `<div class="tablewrap"><table class="cl${grand?' atpg':''}"><thead><tr><th>Rang</th><th>Joueur</th><th>Départ</th><th>Aujourd’hui</th><th>Total</th><th>V-D</th><th></th>${grand?'':'<th>Refus</th>'}</tr></thead><tbody>
-  ${ord.map(n=>{const j=K.jour[n]||{pts:0,v:0,d:0,ref:0};return `<tr><td><b>${K.rangT[n]}</b></td><td>${esc(grand?G26.court(n):n)}</td><td>${(K.depart[n]||0).toLocaleString('fr')}</td><td>${j.pts?'+'+j.pts.toLocaleString('fr'):'—'}</td><td><b>${(K.total[n]||0).toLocaleString('fr')}</b></td><td>${j.v}-${j.d}</td><td>${fl(n)}</td>
+  return `<div class="tablewrap"><table class="cl${grand?' atpg':''}"><thead><tr><th>Rang</th><th>Joueur</th><th>Départ</th><th>Aujourd’hui</th><th>Total</th><th>V-D</th><th></th><th>Palier</th>${grand?'':'<th>Refus</th>'}</tr></thead><tbody>
+  ${ord.map(n=>{const j=K.jour[n]||{pts:0,v:0,d:0,ref:0};return `<tr><td><b>${K.rangT[n]}</b></td><td>${esc(grand?G26.court(n):n)}</td><td>${(K.depart[n]||0).toLocaleString('fr')}</td><td>${j.pts?'+'+j.pts.toLocaleString('fr'):'—'}</td><td><b>${(K.total[n]||0).toLocaleString('fr')}</b></td><td>${j.v}-${j.d}</td><td>${fl(n)}</td><td>${(p=>p.ic+' '+p.n)(palier(K.total[n]||0))}</td>
   ${grand?'':`<td style="white-space:nowrap"><button class="bt mini" type="button" data-act="atpref" data-n="${esc(n)}" data-v="1" title="Match refusé : ${A.refus} points">−2</button>${j.ref?` <button class="bt mini" type="button" data-act="atpref" data-n="${esc(n)}" data-v="-1" title="Annuler un refus">↶ ${j.ref}</button>`:''}</td>`}</tr>`}).join('')}</tbody></table></div>`;
 }
 function vATP(){
@@ -81,14 +81,68 @@ function vATP(){
   <button class="bt orange" type="button" data-act="atpgrand">⛶ Plein écran (vidéoprojecteur)</button></div>
   <p class="small muted">${nb} match${nb>1?'s':''} reçu${nb>1?'s':''} pour la séance ${s}${DB.atpLu&&g?' · Grist lu à '+new Date(DB.atpLu).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):''}. Barème d’Arnaud : de ${A.dessous[4]} à ${A.dessus[4]} points selon l’écart de rang au début de la séance, ${A.perdu} pour une défaite, ${A.refus} pour un refus.</p>
   <section class="carte">${tableau(c,s,K,false)}</section>
+  <p class="small">Paliers (points cumulés) : 🥈 Argent dès <input type="number" class="g6pal" data-atppal="0" value="${seuils()[0]}" min="1">, 🥇 Or dès <input type="number" class="g6pal" data-atppal="1" value="${seuils()[1]}" min="1">, 💎 Diamant dès <input type="number" class="g6pal" data-atppal="2" value="${seuils()[2]}" min="1"> <span class="muted">(à ajuster après la 1re séance)</span></p>
   <p class="small muted">Le classement de départ de la séance suivante part dans le QR de démarrage (onglet Classes) : fais-le rescanner en début de cours pour que les téléphones l’affichent.</p>`;
 }
+/* ---------- Paliers (seuils de points cumulés, réglables) ---------- */
+const PALIERS=[['br','🥉','BRONZE'],['ar','🥈','ARGENT'],['or','🥇','OR'],['dia','💎','DIAMANT']];
+const seuils=()=>Array.isArray(DB.atpPal)&&DB.atpPal.length===3?DB.atpPal:[10,20,30];
+function palier(p){const S=seuils();const i=p>=S[2]?3:p>=S[1]?2:p>=S[0]?1:0;const bas=i?S[i-1]:0,haut=S[i];
+  return {i,k:PALIERS[i][0],ic:PALIERS[i][1],n:PALIERS[i][2],xp:i===3?100:Math.max(0,Math.min(100,Math.round(100*(p-bas)/(haut-bas))))}}
+// Série en cours (victoires d'affilée dans la séance)
+function combos(c,s){const C={};Object.values(M()).filter(m=>norm(m.classe)===norm(c)&&m.seance===s).sort((a,b)=>a.ts-b.ts).forEach(m=>{const w=m.sa>m.sb?m.a:m.b,l=w===m.a?m.b:m.a;C[w]=(C[w]||0)+1;C[l]=0});return C}
+const fr=v=>(+v||0).toLocaleString('fr');
+const ordinal=r=>r+(r===1?'ST':r===2?'ND':r===3?'RD':'TH');
+
+/* ---------- Plein écran façon borne d'arcade ---------- */
+let VUS=null,FILE=[],EN_COURS=false,AVANT={};
 function peindreGrand(){
-  let z=document.getElementById('atp-plein');if(!GRAND){if(z)z.remove();return}
+  let z=document.getElementById('atp-plein');if(!GRAND){if(z)z.remove();VUS=null;FILE=[];return}
   if(!z){z=document.createElement('div');z.id='atp-plein';document.body.appendChild(z)}
-  const c=classeL(),s=DB.seance||1,K=classement(c,s);
-  z.innerHTML=`<div class="rangee" style="justify-content:space-between"><h2 style="margin:0">🥇 Tournoi ATP · ${esc(c)} · séance ${s}</h2><button class="bt" type="button" data-act="atpgrand">Fermer</button></div>${tableau(c,s,K,true)}
-  <p class="small muted">${gristDoc()?'Mis à jour toutes les 10 secondes.':''}</p>`;
+  const c=classeL(),s=DB.seance||1,K=classement(c,s),CB=combos(c,s);
+  const fxAvant=(document.getElementById('ar-fx')||{}).innerHTML||'';
+  const ms=Object.values(M()).filter(m=>norm(m.classe)===norm(c)&&m.seance===s).sort((a,b)=>b.ts-a.ts);
+  // nouveaux matchs depuis le dernier affichage → effets
+  if(VUS===null){VUS=new Set(ms.map(m=>m.id));AVANT=Object.assign({},K.rangT)}
+  else ms.slice().reverse().forEach(m=>{if(!VUS.has(m.id)){VUS.add(m.id);FILE.push(m)}});
+  const ord=K.noms.slice().sort((x,y)=>K.rangT[x]-K.rangT[y]),nb=ord.length,col=nb>12?2:1;
+  const lignes=ord.map(n=>{const r=K.rangT[n],j=K.jour[n]||{},P=palier(K.total[n]||0),d=K.rangD[n]-r,nouv=(AVANT[n]||r)-r>0;
+    return `<div class="ar-row${r===1?' r1':''}"><span class="rk">${ordinal(r)}</span><span class="nm">${esc(G26.court(n).toUpperCase())}${CB[n]>=2?` <span class="cb">COMBO×${CB[n]}</span>`:''}${nouv?' <span class="new">NEW!</span>':''}</span>
+    <span class="tier ${P.k}">${P.ic} ${P.n}</span><span class="xp"><i style="width:${P.xp}%"></i></span><span class="pt">${fr(K.total[n])}</span><span class="mv">${r===1?'👑':d>0?'<b class="up">▲'+d+'</b>':d<0?'<b class="dn">▼'+(-d)+'</b>':'='}</span></div>`}).join('');
+  z.innerHTML=`<div class="ar-sun"></div><div class="ar-grid"></div>
+  <div class="ar-hd"><h1>TOURNOI ATP · HIGH SCORES</h1><span class="live">● ${gristDoc()?'LIVE':'SCORES'} · ${esc(c)} · S${s}</span><button class="bt mini" type="button" data-act="atpgrand">Fermer</button></div>
+  <div class="ar-tb" style="columns:${col}"><div class="ar-row h"><span>RANG</span><span>JOUEUR</span><span>PALIER</span><span>XP</span><span>PTS</span><span></span></div>${lignes}</div>
+  <div class="ar-tick">${ms.slice(0,6).map(m=>{const w=m.sa>m.sb?m.a:m.b,l=w===m.a?m.b:m.a;return `▶ ${esc(G26.court(w).toUpperCase())} BAT ${esc(G26.court(l).toUpperCase())} ${Math.max(m.sa,m.sb)}-${Math.min(m.sa,m.sb)} +${fr(G26.atpGain(K.rangD[w]||nb,K.rangD[l]||nb))} XP`}).join(' ')||'▶ EN ATTENTE DES PREMIERS MATCHS… INSERT COIN'}</div>
+  <div class="ar-scan"></div><div id="ar-fx"></div>`;
+  document.getElementById('ar-fx').innerHTML=fxAvant;
+  AVANT=Object.assign({},K.rangT);
+  if(!EN_COURS)jouer();
+}
+const attendre=t=>new Promise(r=>setTimeout(r,t));
+async function jouer(){
+  EN_COURS=true;
+  while(FILE.length&&GRAND){
+    const m=FILE.shift(),c=classeL(),s=DB.seance||1,K=classement(c,s),CB=combos(c,s),nb=K.noms.length;
+    const w=m.sa>m.sb?m.a:m.b,l=w===m.a?m.b:m.a,rW=K.rangD[w]||nb,rL=K.rangD[l]||nb,gain=G26.atpGain(rW,rL);
+    const boss=rL===1||rW-rL>=3,serre=Math.abs(m.sa-m.sb)<=2;const FX=h=>{const f=document.getElementById('ar-fx');if(f)f.innerHTML=h};if(!document.getElementById('ar-fx'))break;
+    const W=esc(G26.court(w).toUpperCase()),L=esc(G26.court(l).toUpperCase()),sc=`${Math.max(m.sa,m.sb)}-${Math.min(m.sa,m.sb)}`;
+    const cont=`<div class="ar-cont"><div class="t">CONTINUE ? ▶ YES</div><p>${esc(G26.court(l))} a tout donné${serre?` : ${sc}, à ${Math.abs(m.sa-m.sb)} point${Math.abs(m.sa-m.sb)>1?'s':''} !`:'.'}</p><div class="g">+${fr(A.perdu)} XP · BONUS COURAGE 💪</div></div>`;
+    if(boss){
+      const etoiles=['7%;top:16%','88%;top:20%','12%;top:72%','84%;top:74%','48%;top:6%','30%;top:84%'].map((p,i)=>`<span class="star" style="left:${p};animation-delay:${i*.15}s">${['⭐','🌟','✨'][i%3]}</span>`).join('');
+      FX(`<div class="ar-ov boss"><div><div class="bt">BOSS VAINCU !</div>
+      <div class="vs"><div class="pc gw"><small>PLAYER · ${ordinal(rW)}</small><b>${W}</b><div class="hp"><i style="width:${Math.round(100*Math.max(m.sa,m.sb)/11)}%;background:#4ade80"></i></div></div><span class="vsx">VS</span>
+      <div class="pc gl"><small>BOSS · ${ordinal(rL)}${rL===1?' 👑':''}</small><b>${L}</b><div class="hp"><i class="vide"></i></div></div></div>
+      <div class="gain">+${fr(gain)} XP</div><div class="lvup">★ RANK UP · ${ordinal(K.rangT[w])} ★</div></div>${etoiles}</div>`);
+      await attendre(4200);
+    }else{
+      const pieces=Array.from({length:9},(_,i)=>`<span class="coin" style="left:${12+i*9}%;animation-delay:${(i%4)*.12}s">★</span>`).join('');
+      FX(`<div class="ar-ov vic"><div><div class="bt">VICTOIRE !</div><div class="qui">${W} <span>${sc} · CONTRE ${L}</span></div>
+      <div class="gain">+${fr(gain)} XP</div>${CB[w]>=2?`<div class="combo">COMBO ×${CB[w]} 🔥</div>`:''}</div>${pieces}</div>`);
+      await attendre(2600);
+    }
+    FX(cont);await attendre(2000);FX('');await attendre(300);
+  }
+  EN_COURS=false;
 }
 async function tic(){const c=classeL();if(!c)return;try{await lireGrist(c)}catch(e){}if(GRAND)peindreGrand();else if(DB.vue==='atp')rendre()}
 
@@ -108,10 +162,55 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-act]
 document.addEventListener('change',e=>{const t=e.target;
   if(t.id==='atp-s'){DB.seance=+t.value;sauver();rendre()}
   if(t.id==='atp-auto'){if(t.checked){AUTO=setInterval(tic,10000);tic()}else{clearInterval(AUTO);AUTO=null}}
+  if(t.dataset&&t.dataset.atppal!=null){const S=seuils().slice();S[+t.dataset.atppal]=Math.max(1,+t.value||1);if(!(S[0]<S[1]&&S[1]<S[2])){alert('Les paliers doivent augmenter : ex. 10, 20, 30.');rendre();return}DB.atpPal=S;sauver();rendre()}
   if(t.id==='atp-gr'){const u=t.value.trim();if(u&&!/^https:\/\//.test(u)){alert('Le lien doit commencer par https://');return}DB.gristATP=u;sauver()}
 });
-const css=document.createElement('style');css.textContent=`#atp-plein{position:fixed;inset:0;z-index:60;background:var(--craie);padding:20px;overflow:auto}
-table.atpg{font-size:clamp(18px,2.4vw,30px)}table.atpg td,table.atpg th{padding:8px 14px}`;document.head.appendChild(css);
+const css=document.createElement('style');css.textContent=`
+#atp-plein{position:fixed;inset:0;z-index:60;overflow:hidden;background:#07031a;color:#fff;font-family:Archivo,Arial,sans-serif}
+#atp-plein .ar-sun{position:absolute;left:50%;top:26vh;width:44vh;height:44vh;margin-left:-22vh;border-radius:50%;background:linear-gradient(#ff2fd0,#ff8a00 60%,#ffe600);opacity:.16;-webkit-mask:repeating-linear-gradient(#000 0 2.4vh,transparent 2.4vh 3.4vh);mask:repeating-linear-gradient(#000 0 2.4vh,transparent 2.4vh 3.4vh)}
+#atp-plein .ar-grid{position:absolute;left:-50%;right:-50%;bottom:-6vh;height:44vh;transform:perspective(320px) rotateX(62deg);background:linear-gradient(transparent 0 96%,#ff2fd0 96%) 0 0/100% 6vh,linear-gradient(90deg,transparent 0 97%,#00e5ff 97%) 0 0/8vh 100%;opacity:.42;animation:argr 1.6s linear infinite}
+@keyframes argr{to{background-position:0 6vh,0 0}}
+#atp-plein .ar-scan{position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.18) 0 2px,transparent 2px 4px);pointer-events:none;z-index:20}
+.ar-hd{position:relative;z-index:2;display:flex;align-items:center;gap:2vw;padding:2.4vh 3vw 1vh}
+.ar-hd h1{flex:1;margin:0;font:900 clamp(22px,4.4vh,48px) "Courier New",monospace;letter-spacing:.06em;color:#fff;text-shadow:0 0 6px #ff2fd0,0 0 20px #ff2fd0}
+.ar-hd .live{font:900 clamp(13px,2.2vh,22px) "Courier New",monospace;color:#ffe600;text-shadow:0 0 10px #ffe600;animation:arbl 1s steps(2) infinite}
+@keyframes arbl{50%{opacity:.25}}
+.ar-tb{position:relative;z-index:2;margin:1vh 3vw;border:2px solid #00e5ff;box-shadow:0 0 14px #00e5ff inset,0 0 14px #00e5ff;border-radius:10px;background:rgba(7,3,26,.78);padding:.6vh 1vw;column-gap:2vw;max-height:72vh;overflow:hidden}
+.ar-row{break-inside:avoid;display:grid;grid-template-columns:5.5em 1fr 8.5em 7em 4.2em 3em;align-items:center;gap:.6em;padding:.45vh .5em;font:900 clamp(14px,2.7vh,30px) "Courier New",monospace;border-bottom:1px dashed rgba(0,229,255,.25)}
+.ar-row.h{font-size:clamp(11px,1.7vh,18px);color:#7dd3fc;border-bottom:2px solid rgba(0,229,255,.5)}
+.ar-row .rk{color:#ffe600}.ar-row.r1 .rk{text-shadow:0 0 10px #ffe600}.ar-row.r1 .nm{text-shadow:0 0 8px #00e5ff,0 0 18px #00e5ff}
+.ar-row .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ar-row .cb{color:#ff2fd0;text-shadow:0 0 8px #ff2fd0;font-size:.7em}.ar-row .new{color:#ffe600;font-size:.6em;animation:arbl 1s steps(2) infinite}
+.ar-row .tier{font:900 .5em Archivo,Arial;padding:.35em .6em;border-radius:6px;text-align:center;letter-spacing:.05em;color:#111}
+.tier.dia{background:linear-gradient(135deg,#a5f3fc,#6366f1)}.tier.or{background:linear-gradient(135deg,#fde68a,#d97706)}.tier.ar{background:linear-gradient(135deg,#f1f5f9,#94a3b8)}.tier.br{background:linear-gradient(135deg,#fdba74,#9a3412);color:#fff}
+.ar-row .xp{height:.5em;border-radius:6px;background:#1e1b4b;overflow:hidden;border:1px solid #6366f1}.ar-row .xp i{display:block;height:100%;background:linear-gradient(90deg,#22d3ee,#a855f7)}
+.ar-row .up{color:#4ade80}.ar-row .dn{color:#f87171}
+.ar-tick{position:absolute;z-index:2;left:0;right:0;bottom:0;padding:1.2vh 3vw;background:rgba(255,47,208,.18);border-top:2px solid #ff2fd0;font:900 clamp(12px,2.2vh,22px) "Courier New",monospace;white-space:nowrap;overflow:hidden;color:#fbcfe8}
+#ar-fx{position:absolute;inset:0;z-index:15;pointer-events:none}
+.ar-ov{position:absolute;inset:0;display:grid;place-items:center;text-align:center;animation:arin .25s ease-out}
+@keyframes arin{from{opacity:0;transform:scale(1.15)}to{opacity:1;transform:none}}
+.ar-ov.boss{background:radial-gradient(circle,rgba(255,0,80,.35),rgba(7,3,26,.94) 70%)}.ar-ov.vic{background:rgba(7,3,26,.82)}
+.ar-ov .bt{font:900 clamp(56px,15vh,170px)/.9 Archivo,Arial;font-stretch:72%;font-style:italic;color:#ffe600;text-shadow:5px 5px 0 #ff2fd0,10px 10px 0 #00e5ff,0 0 40px #ffe600;transform:rotate(-4deg);animation:arpop .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes arpop{from{transform:rotate(-4deg) scale(.3)}to{transform:rotate(-4deg) scale(1)}}
+.ar-ov.vic .bt{color:#4ade80;text-shadow:5px 5px 0 #065f46,0 0 30px #22c55e}
+.ar-ov .vs{display:flex;align-items:center;justify-content:center;gap:3vw;margin-top:3vh}
+.ar-ov .pc{width:28vw;max-width:360px;border:3px solid #fff;border-radius:12px;padding:1.4vh 1vw;background:rgba(7,3,26,.85)}
+.ar-ov .pc.gw{border-color:#4ade80;box-shadow:0 0 18px #4ade80}.ar-ov .pc.gl{border-color:#ff2fd0;box-shadow:0 0 18px #ff2fd0}
+.ar-ov .pc b{display:block;font:900 clamp(20px,4vh,40px) Archivo,Arial}.ar-ov .pc small{font:900 clamp(12px,2vh,20px) "Courier New";color:#7dd3fc}
+.ar-ov .hp{height:2.2vh;border:2px solid #fff;border-radius:4px;margin-top:.8vh;background:#3f0d1c}.ar-ov .hp i{display:block;height:100%}
+.ar-ov .hp i.vide{width:100%;background:#ff2fd0;animation:arhp 1.4s .4s ease-in forwards}@keyframes arhp{to{width:0}}
+.ar-ov .vsx{font:900 clamp(30px,7vh,70px) Archivo;font-style:italic;color:#ff2fd0;text-shadow:0 0 16px #ff2fd0}
+.ar-ov .gain{display:inline-block;margin-top:2.4vh;font:900 clamp(30px,7vh,70px) "Courier New";color:#4ade80;text-shadow:0 0 16px #4ade80}
+.ar-ov .lvup,.ar-ov .combo{font:900 clamp(18px,4vh,40px) "Courier New";color:#ffe600;margin-top:1vh;text-shadow:0 0 12px #ffe600}.ar-ov .combo{color:#ff2fd0;text-shadow:0 0 14px #ff2fd0}
+.ar-ov .qui{font:900 clamp(24px,5.5vh,56px) Archivo;margin-top:2vh}.ar-ov .qui span{color:#7dd3fc;font:900 clamp(14px,3vh,30px) "Courier New"}
+.ar-ov .star{position:absolute;font-size:clamp(24px,5vh,54px);animation:arst 1.2s ease-in-out infinite alternate}@keyframes arst{to{transform:scale(1.5) rotate(25deg)}}
+.ar-ov .coin{position:absolute;bottom:-10vh;width:5vh;height:5vh;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff7b0,#facc15 45%,#a16207);box-shadow:0 0 10px #facc15;font:900 2.6vh Archivo;color:#713f12;display:grid;place-items:center;animation:arcoin 1.6s ease-out forwards}
+@keyframes arcoin{0%{transform:translateY(0)}55%{transform:translateY(-75vh) rotate(200deg)}100%{transform:translateY(-55vh) rotate(360deg);opacity:0}}
+.ar-cont{position:absolute;right:3vw;bottom:9vh;width:min(46vw,520px);border:3px solid #a855f7;box-shadow:0 0 18px #a855f7;border-radius:12px;background:rgba(20,8,48,.95);padding:2vh 1.6vw;animation:arin .25s ease-out}
+.ar-cont .t{font:900 clamp(18px,3.8vh,40px) "Courier New";color:#e9d5ff;text-shadow:0 0 10px #a855f7}.ar-cont p{font:700 clamp(14px,2.4vh,24px) Atkinson,Arial;color:#ddd6fe;margin:.6vh 0 0}
+.ar-cont .g{font:900 clamp(16px,3.2vh,34px) "Courier New";color:#c4b5fd;margin-top:.8vh}
+#atp-plein .bt.mini{position:relative;z-index:25}
+@media (prefers-reduced-motion:reduce){#atp-plein *{animation:none!important}}`;document.head.appendChild(css);
 
-window.ATPP={vATP,reglage,pourQR,depuisFichier,depuisQR,classement,lireGrist};
+window.ATPP={vATP,reglage,pourQR,depuisFichier,depuisQR,classement,lireGrist,palier,_peindre:()=>peindreGrand()};
 })();
