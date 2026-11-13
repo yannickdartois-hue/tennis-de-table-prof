@@ -21,5 +21,20 @@ window.EPS_AIDE={appli:'Tennis de table · Outil prof',bouton:false,pied:'Toutes
 {t:'Codes oubliés, changement de tablette',html:`<p>Le groupe touche « Code oublié ? ». Si un QR s’affiche, scannez-le avec le scanner de l’outil : le code s’affiche. Sinon (carnet pas encore protégé), la marche à suivre est dans l’onglet Classes, carte « Un groupe a oublié son code ».</p><p>Pour protéger les groupes : faites rescanner le QR de la classe, puis chaque groupe ouvre son carnet avec son code. Gardez votre sauvegarde : elle contient la clé qui lit les codes.</p><ul><li><b>Changement de tablette</b> : fiche de l’élève → <b>QR de reprise</b> : rend à l’élève son étoile, ses axes, ses matchs à thème et ses poules sur un nouveau carnet.</li><li>Copies de secours : arrivent avec l’envoi en ligne ; la clé est dans la sauvegarde de l’outil.</li></ul>`},
 {t:'Sauvegarde, fin d’année',html:`<ul><li>Importer → <span class="bouton">Exporter une sauvegarde</span> / « Restaurer » pour passer de l’iPad au PC.</li>
 <li>Classes → <span class="bouton">Archiver l’année et repartir à zéro</span>. À la rentrée, l’outil le rappelle s’il contient encore l’année précédente.</li></ul>`},
-{t:'Démo pour un collègue',html:`<p>« Découvrir avec une classe fictive » (Importer, Classes) ou <b>…/tennis-de-table-prof/?demo</b> : vos vraies données ne sont pas touchées.</p>`}]}
+{t:'Démo pour un collègue',html:`<p>« Découvrir avec une classe fictive » (Importer, Classes) ou <b>…/tennis-de-table-prof/?demo</b> : vos vraies données ne sont pas touchées.</p>`},
+{t:'Parcours GAREEPS 2026 (par classe)',html:`<ol><li><b>Classes</b> → « Parcours de la classe » : <b>Étoile 7 axes (actuel)</b> ou <b>GAREEPS 2026 (SCE / SRP / STOM)</b>. Les autres classes ne changent pas.</li>
+<li>Réglez les paliers du polygone (2 / 4 / 6 par défaut), puis faites scanner le <b>QR de démarrage</b>.</li>
+<li><b>Au début des SCE n°2 et n°3, refaites scanner le QR de démarrage</b> : il apporte aux téléphones les polygones et les choix déjà reçus.</li>
+<li>Onglet <b>GAREEPS</b> : polygones des 3 SCE, choix, meilleur degré par SRP, ateliers STOM validés, tables reçues et élèves sans table.</li></ol>
+<p class="astuce">La SCE se joue à 4 avec un seul téléphone ; la table envoie un fichier « …_Table4_S5_sce2.json » ou un QR « SCE ».</p>`},
+{t:'Tournoi ATP et Grist (en direct)',html:`<ul><li>Barème d’Arnaud : 5,5 à 1 point selon l’écart de rang au début de la séance, 0,5 pour une défaite, −2 pour un refus (bouton « −2 » de l’onglet <b>ATP</b>).</li>
+<li><b>Direct par internet</b> : un seul document Grist pour toutes les classes, partagé en « Accès public : éditeur » (aucune clé). Collez son adresse dans Classes → « Tournoi ATP en direct », puis refaites scanner le QR de démarrage. Seuls prénom et initiale vont dans Grist.</li>
+<li>Sans internet, les matchs arrivent par la borne ou avec l’envoi des séances. Un match n’est jamais compté deux fois.</li>
+<li>Paliers des avatars (onglet ATP) : 10 / 20 / 30 points par défaut, à ajuster après la 1re séance.</li></ul>`},
+{t:'Mode borne (tablette sur trépied)',html:`<ol><li>Onglet <b>ATP</b> → <span class="bouton">📷 Mode borne</span> : tableau arcade en grand, caméra en bas à gauche (🔄 pour changer de caméra). Branchez la tablette sur secteur, son activé.</li>
+<li>Après chaque match, l’arbitre montre le QR de son téléphone : bip, effet (victoire, boss vaincu), classement à jour.</li>
+<li><b>Borne sur une autre tablette</b> : ouvrez l’outil prof dessus, lancez le mode borne et montrez-lui le <b>QR de démarrage</b> de la classe (liste, classement de départ, paliers, avatars).</li></ol>`},
+{t:'Démos pour les collègues',html:`<ul><li><b>…/tennis-de-table-prof/?demo=g26</b> : classe fictive de 16 élèves (SCE, SRP, STOM, ATP, avatars).</li>
+<li><span class="bouton">▶ Démo de la borne</span> : un faux match toutes les 7 secondes, idéal en salle des profs.</li>
+<li><b>…/tennis-de-table-eleves/?demo=g26</b> : l’appli élève sur le parcours GAREEPS 2026.</li></ul>`}]}
 ]};
