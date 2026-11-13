@@ -130,7 +130,7 @@ const G26={
     {k:'ar',afl:'AFL3',n:'Arbitrage',d:['Ne connaît pas le règlement','Des erreurs','Maîtrise le règlement','Sait justifier une décision']}
   ],
   // Ordre des 4 matchs à la table : [joueur 1, joueur 2, observateur du 1, observateur du 2] (index 0 à 3 = A, B, C, D).
-  // Au match suivant, chacun affronte celui qu'il vient d'observer.
+  // Chacun joue 2 matchs ; à son 2e match, il affronte un joueur qu'il a observé (match 1 ou 2).
   rot:[[0,1,2,3],[2,3,0,1],[0,2,1,3],[1,3,0,2]],
   balles:12
 };
