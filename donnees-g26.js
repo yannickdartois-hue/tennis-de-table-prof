@@ -63,6 +63,7 @@ const G26={
      q:[['Mon adversaire est-il plus à l’aise en coup droit ou en revers ?','Marque-t-il beaucoup de points gagnants ? Comment ?','Est-il mobile ou plutôt fixe ?'],
         ['Quel serait le point faible technique de mon adversaire ?','Comment puis-je l’exploiter ?']]}
   ],
+  // STOM : 3 ateliers chacune. pr = lien avec la vidéo de l'exercice ex : '' conforme, 'proche' ou 'partielle' (variante : avertissement), 'nouveau' (pas de vidéo) ; vn = remarque sur la vidéo.
   // STOM : 3 ateliers chacune. s = seuils [niveau 1, niveau 2] ; moins = « moins de » (museler) ;
   // ex = ton exercice le plus proche (image + vidéo) ; pr = ressemblance ('' quasi identique, 'proche', 'partielle').
   stom:[
@@ -70,7 +71,7 @@ const G26={
       {n:1,t:'Servir sur une zone choisie',jeu:'Le jeu des cibles',b:20,u:'cible touchée',
        c:'Toucher le plus de fois possible sa cible sur 20 balles. Le joueur pose sa cible où il veut sur la demi-table adverse, en zone profonde (après les bandes posées sur la table).',
        cr:['Balle dans la paume, je la lance vers le haut d’environ 20 cm','Je la frappe quand elle redescend, avec un rebond dans mon camp (plus le rebond est loin de moi, plus le service est long)','J’oriente mon tamis vers la zone visée et je dose la force de ma frappe'],
-       nv:['13 fois la grande cible','10 fois la petite cible'],s:[13,10],ex:'24',pr:'proche'},
+       nv:['13 fois la grande cible','10 fois la petite cible'],s:[13,10],ex:'24',pr:''},
       {n:2,t:'Servir fort',jeu:'Le jeu de massacre',b:10,u:'gobelet renversé',
        c:'Détruire les tours de gobelets sur 10 balles.',
        cr:['Je fais un rebond proche du milieu de ma table','Ma trajectoire est tendue et frôle le filet','Je dose la force de ma frappe tout en accompagnant la balle'],
@@ -87,11 +88,11 @@ const G26={
       {n:2,t:'Déplacer l’adversaire de gauche à droite',jeu:'L’essuie-glace',b:10,u:'échanges d’un trait',
        c:'Sur 10 balles, jouer alternativement à gauche et à droite sur mes 2 partenaires, qui ne jouent que sur mon coup droit. Réaliser le plus d’échanges avec une balle.',
        cr:['Je prépare mon coup droit en ouvrant le coude et en tirant la raquette vers l’arrière','Pour frapper, je replie le coude en tenant fort ma raquette','En revers, je reste face à la table : frappe « frisbee »','J’oriente mon tamis vers la zone visée'],
-       nv:['10 échanges d’un trait en coup droit','10 échanges d’un trait en revers'],s:[10,10],ex:'17',pr:''},
+       nv:['10 échanges d’un trait en coup droit','10 échanges d’un trait en revers'],s:[10,10],ex:'17',pr:'proche'},
       {n:3,t:'Savoir où jouer avant de frapper',jeu:'Le voyant',b:10,u:'échanges d’un trait',
        c:'Sur 10 balles, réaliser le plus d’échanges en annonçant avant de frapper le numéro de la zone visée.',
        cr:['Je connais le numéro des zones','J’annonce la zone visée avant de frapper','J’oriente mon tamis vers la zone visée','Je suis mobile, en appui sur la plante des pieds, pour frapper plus de balles avec mon côté fort'],
-       nv:['7 échanges d’un trait, coup droit seulement','10 échanges d’un trait'],s:[7,10],ex:'19',pr:'proche'}]},
+       nv:['7 échanges d’un trait, coup droit seulement','10 échanges d’un trait'],s:[7,10],ex:'19',pr:'partielle'}]},
     {k:'K',t:'Le KO',titre:'Rompre l’échange au bon moment',at:[
       {n:1,t:'Accélérer chaque balle en coup droit',jeu:'La gifle',b:20,u:'smash',
        c:'Réaliser des smashs grâce aux partenaires qui, en jouant par le bas, visent la zone centrale de ma table. Un Pom’do peut aider.',
@@ -100,11 +101,11 @@ const G26={
       {n:2,t:'Attendre la balle favorable',jeu:'Le détective',b:20,u:'point gagné',
        c:'Jouer alternativement à gauche et à droite, zone revers interdite. À un moment, un partenaire joue une balle en cloche et lente : l’attaquer pour rompre l’échange.',
        cr:['Je prépare mon coup droit en tirant la raquette vers l’arrière','Pour frapper, je replie le coude en tenant fort la raquette et j’oriente mon tamis vers la zone visée'],
-       nv:['7 points gagnés par accélération sur la balle facile','10 points gagnés'],s:[7,10],ex:'32',pr:'proche'},
+       nv:['7 points gagnés par accélération sur la balle facile','10 points gagnés'],s:[7,10],ex:'32',pr:'partielle'},
       {n:3,t:'Prévoir la rupture',jeu:'Le chasseur',b:20,u:'point gagné après « PAN ! »',
        c:'Sur 20 balles, annoncer « PAN ! » avant de frapper, au moment où je compte terminer le point. Partenaire « neutre » : il ne prend pas l’avantage.',
        cr:['Je manœuvre mon partenaire pour obtenir une balle facile','Quand je repère une balle favorable, j’annonce « PAN ! »'],
-       nv:['8 points gagnés juste après « PAN ! », partenaire neutre','Idem, partenaire « adversaire »'],s:[8,8],ex:'33',pr:''}]},
+       nv:['8 points gagnés juste après « PAN ! », partenaire neutre','Idem, partenaire « adversaire »'],s:[8,8],ex:'33',pr:'',vn:'Dans la vidéo, on crie « Banco ! » : chez nous, c’est « PAN ! ».'}]},
     {k:'T',t:'Le tactique',titre:'Identifier les caractéristiques adverses',at:[
       {n:1,t:'Servir varié',jeu:'L’incertitude',b:20,u:'point gagné vite',
        c:'Réaliser des services variés en vitesse, direction, hauteur et effet pour voir comment s’adapte le relanceur et où il est le moins à l’aise.',
