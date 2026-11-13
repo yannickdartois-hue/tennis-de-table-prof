@@ -113,12 +113,14 @@ function peindreGrand(){
   if(VUS===null){VUS=new Set(ms.map(m=>m.id));AVANT=Object.assign({},K.rangT)}
   else ms.slice().reverse().forEach(m=>{if(!VUS.has(m.id)){VUS.add(m.id);FILE.push(m)}});
   const ord=K.noms.slice().sort((x,y)=>K.rangT[x]-K.rangT[y]),nb=ord.length,col=nb>12?2:1;
-  const lignes=ord.map(n=>{const r=K.rangT[n],j=K.jour[n]||{},P=palier(K.total[n]||0),d=K.rangD[n]-r,nouv=(AVANT[n]||r)-r>0;
+  const ligne=n=>{const r=K.rangT[n],j=K.jour[n]||{},P=palier(K.total[n]||0),d=K.rangD[n]-r,nouv=(AVANT[n]||r)-r>0;
     return `<div class="ar-row${r===1?' r1':''}"><span class="rk">${ordinal(r)}</span><span class="nm"><span class="ar-av">${avDe(c,n,64)}</span>${esc(G26.court(n).toUpperCase())}${CB[n]>=2?` <span class="cb">COMBO×${CB[n]}</span>`:''}${nouv?' <span class="new">NEW!</span>':''}</span>
-    <span class="tier ${P.k}">${P.ic} ${P.n}</span><span class="xp"><i style="width:${P.xp}%"></i></span><span class="pt">${fr(K.total[n])}</span><span class="mv">${r===1?'👑':d>0?'<b class="up">▲'+d+'</b>':d<0?'<b class="dn">▼'+(-d)+'</b>':'='}</span></div>`}).join('');
+    <span class="tier ${P.k}">${P.ic} ${P.n}</span><span class="xp"><i style="width:${P.xp}%"></i></span><span class="pt">${fr(K.total[n])}</span><span class="mv">${r===1?'👑':d>0?'<b class="up">▲'+d+'</b>':d<0?'<b class="dn">▼'+(-d)+'</b>':'='}</span></div>`};
+  const tete='<div class="ar-row h"><span>RANG</span><span>JOUEUR</span><span>PALIER</span><span>XP</span><span>PTS</span><span></span></div>';
+  const moitie=Math.ceil(nb/col),cols=Array.from({length:col},(_,i)=>ord.slice(i*moitie,(i+1)*moitie));
   z.innerHTML=`<div class="ar-sun"></div><div class="ar-grid"></div>
   <div class="ar-hd"><h1>TOURNOI ATP · HIGH SCORES</h1><span class="live">● ${gristDoc()?'LIVE':'SCORES'} · ${esc(c)} · S${s}</span><button class="bt mini" type="button" data-act="atpgrand">Fermer</button></div>
-  <div class="ar-tb" style="columns:${col}"><div class="ar-row h"><span>RANG</span><span>JOUEUR</span><span>PALIER</span><span>XP</span><span>PTS</span><span></span></div>${lignes}</div>
+  <div class="ar-tb ar-c${col}">${cols.map(L=>`<div class="ar-col">${tete}${L.map(ligne).join('')}</div>`).join('')}</div>
   <div class="ar-tick">${ms.slice(0,6).map(m=>{const w=m.sa>m.sb?m.a:m.b,l=w===m.a?m.b:m.a;return `▶ ${esc(G26.court(w).toUpperCase())} BAT ${esc(G26.court(l).toUpperCase())} ${Math.max(m.sa,m.sb)}-${Math.min(m.sa,m.sb)} +${fr(G26.atpGain(K.rangD[w]||nb,K.rangD[l]||nb))} XP`}).join(' ')||'▶ EN ATTENTE DES PREMIERS MATCHS… INSERT COIN'}</div>
   <div class="ar-scan"></div><div id="ar-fx"></div>`;
   document.getElementById('ar-fx').innerHTML=fxAvant;
@@ -271,6 +273,8 @@ const css=document.createElement('style');css.textContent=`
 #borne-cam .bc-msg{margin:0;padding:6px 8px;font:900 15px "Courier New",monospace;color:#ffe600;background:#07031a;text-align:center}
 #borne-cam .bc-msg.ok{color:#07031a;background:#4ade80}#borne-cam .bc-msg.err{color:#fff;background:#dc2626}
 #borne-cam .bc-bt{position:absolute;right:6px;top:6px}
+.ar-tb.ar-c2{display:grid;grid-template-columns:1fr 1fr;gap:0 2vw}.ar-c2 .ar-row{grid-template-columns:3.6em 1fr 6.4em 4.5em 3.4em 2.2em;font-size:clamp(12px,2.2vh,24px)}
+.ar-c2 .ar-row .tier{font-size:.5em}
 @media (prefers-reduced-motion:reduce){#atp-plein *{animation:none!important}}`;document.head.appendChild(css);
 
 window.ATPP={avatarsClasse:c=>{const o={};Object.entries(DB.avatars||{}).forEach(([k,v])=>{const [cc,n]=k.split('|');if(cc===norm(c)){const x=((DB.classesL[c]||{}).eleves||[]).find(y=>norm(y)===n);if(x)o[x]=v.id}});return Object.keys(o).length?o:undefined},seuils,vATP,reglage,pourQR,depuisFichier,depuisQR,classement,lireGrist,palier,_peindre:()=>peindreGrand(),_lu:t=>lu(t)};
