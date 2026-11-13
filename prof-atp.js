@@ -80,7 +80,8 @@ function vATP(){
   return `<h2>Tournoi ATP · ${esc(c)}</h2>
   <div class="rangee noprint"><label class="small">Séance <select id="atp-s">${Array.from({length:12},(_,i)=>i+1).map(i=>`<option${i===s?' selected':''}>${i}</option>`).join('')}</select></label>
   ${g?`<button class="bt" type="button" data-act="atplire">↻ Actualiser depuis Grist</button><label class="small"><input type="checkbox" id="atp-auto"${AUTO?' checked':''}> toutes les 10 s</label>`:'<span class="small muted">Pas de Grist : les matchs arrivent avec les séances (Importer).</span>'}
-  <button class="bt orange" type="button" data-act="atpgrand">⛶ Plein écran (vidéoprojecteur)</button></div>
+  <button class="bt orange" type="button" data-act="atpborne">📷 Mode borne (tablette sur trépied)</button><button class="bt" type="button" data-act="atpgrand">⛶ Plein écran sans caméra</button></div>
+  <p class="small muted">Mode borne : le tableau en grand et la caméra allumée en bas à gauche. Après chaque match, l’arbitre y montre le QR affiché par son téléphone ; le classement et les effets se mettent à jour, même sans internet. Branche la tablette sur secteur.</p>
   <p class="small muted">${nb} match${nb>1?'s':''} reçu${nb>1?'s':''} pour la séance ${s}${DB.atpLu&&g?' · Grist lu à '+new Date(DB.atpLu).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):''}. Barème d’Arnaud : de ${A.dessous[4]} à ${A.dessus[4]} points selon l’écart de rang au début de la séance, ${A.perdu} pour une défaite, ${A.refus} pour un refus.</p>
   <section class="carte">${tableau(c,s,K,false)}</section>
   <p class="small">Paliers (points cumulés) : 🥈 Argent dès <input type="number" class="g6pal" data-atppal="0" value="${seuils()[0]}" min="1">, 🥇 Or dès <input type="number" class="g6pal" data-atppal="1" value="${seuils()[1]}" min="1">, 💎 Diamant dès <input type="number" class="g6pal" data-atppal="2" value="${seuils()[2]}" min="1"> <span class="muted">(à ajuster après la 1re séance)</span></p>
@@ -147,6 +148,42 @@ async function jouer(){
   }
   EN_COURS=false;
 }
+/* ---------- Mode borne : tablette sur trépied, caméra allumée, l'arbitre scanne le QR du match ---------- */
+let CAM=null; // {stream,video,timer,face,dernier,dernierT,wake}
+function bip(ok){try{const A=new (window.AudioContext||window.webkitAudioContext)(),o=A.createOscillator(),g=A.createGain();o.type='square';o.frequency.value=ok?880:220;g.gain.value=.06;o.connect(g);g.connect(A.destination);o.start();
+  if(ok)o.frequency.setValueAtTime(1320,A.currentTime+.08);o.stop(A.currentTime+(ok?.18:.3));setTimeout(()=>A.close(),500)}catch(e){}}
+function msgCam(t,ok){const m=document.querySelector('#borne-cam .bc-msg');if(!m)return;m.textContent=t;m.className='bc-msg'+(ok===true?' ok':ok===false?' err':'');clearTimeout(msgCam.t);msgCam.t=setTimeout(()=>{m.textContent='Montre le QR de ton match ici';m.className='bc-msg'},3500)}
+async function lu(txt){
+  const q=await TTQR.decoder(txt),c=classeL();
+  if(q.c&&norm(q.c)!==norm(c))throw new Error('QR de la classe '+q.c+' : la borne affiche '+c+'.');
+  if(q.t==='A'){const neufs=(q.m||[]).filter(x=>!M()[x[0]]).length;depuisQR(q);
+    if(+q.s!==(DB.seance||1)&&neufs){DB.seance=+q.s}sauver();
+    if(!neufs){msgCam('Déjà compté ✓',true);bip(true);return}
+    msgCam(neufs>1?neufs+' matchs ajoutés':'Match ajouté !',true);bip(true);peindreGrand();return}
+  if(q.t==='V'){const AVS=DB.avatars||(DB.avatars={});AVS[norm(c)+'|'+norm(q.e)]={id:q.av,ts:q.ts||0};sauver();
+    msgCam('Avatar de '+G26.court(q.e)+' : '+((window.G26AV&&G26AV.parId[q.av])||{n:q.av}).n,true);bip(true);peindreGrand();return}
+  throw new Error('Ce QR n’est pas un match ATP.');
+}
+async function camDemarrer(face){
+  camArreter();
+  const z=document.createElement('div');z.id='borne-cam';
+  z.innerHTML=`<video playsinline muted></video><div class="bc-vis"></div><p class="bc-msg">Montre le QR de ton match ici</p><div class="bc-bt"><button type="button" class="bt mini" data-act="atpcamface" title="Changer de caméra">🔄</button></div>`;
+  document.body.appendChild(z);
+  const video=z.querySelector('video');CAM={video,face:face||'user',dernier:'',dernierT:0};
+  video.classList.toggle('miroir',CAM.face==='user');
+  try{CAM.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:CAM.face,width:{ideal:1280}},audio:false});video.srcObject=CAM.stream;await video.play().catch(()=>{})}
+  catch(e){msgCam('Autorise la caméra dans les réglages du navigateur.',false);return}
+  try{CAM.wake=await navigator.wakeLock.request('screen')}catch(e){}
+  const cv=document.createElement('canvas'),ctx=cv.getContext('2d',{willReadFrequently:true});
+  const tic=async()=>{if(!CAM)return;
+    if(video.readyState>=2&&video.videoWidth){const w=video.videoWidth,h=video.videoHeight,k=Math.min(1,800/Math.max(w,h));cv.width=Math.round(w*k);cv.height=Math.round(h*k);ctx.drawImage(video,0,0,cv.width,cv.height);
+      const r=window.jsQR&&jsQR(ctx.getImageData(0,0,cv.width,cv.height).data,cv.width,cv.height,{inversionAttempts:'dontInvert'});
+      if(r&&r.data&&(r.data!==CAM.dernier||Date.now()-CAM.dernierT>5000)){CAM.dernier=r.data;CAM.dernierT=Date.now();try{await lu(r.data)}catch(x){msgCam(x.message||String(x),false);bip(false)}}}
+    if(CAM)CAM.timer=setTimeout(tic,200)};
+  tic();
+}
+function camArreter(){if(!CAM&&!document.getElementById('borne-cam'))return;if(CAM){clearTimeout(CAM.timer);if(CAM.stream)CAM.stream.getTracks().forEach(t=>t.stop());try{CAM.wake&&CAM.wake.release()}catch(e){}}CAM=null;const z=document.getElementById('borne-cam');if(z)z.remove()}
+
 async function tic(){const c=classeL();if(!c)return;try{await lireGrist(c)}catch(e){}if(GRAND)peindreGrand();else if(DB.vue==='atp')rendre()}
 
 /* ---------- Réglage du lien Grist (onglet Classes) ---------- */
@@ -159,7 +196,9 @@ function reglage(){
 /* ---------- Évènements ---------- */
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act;
   if(a==='atplire'){e.stopImmediatePropagation();try{const n=await lireGrist(classeL());journal('Grist : '+n+' nouveau(x) match(s) ATP')}catch(x){alert(x.message)}rendre();return}
-  if(a==='atpgrand'){e.stopImmediatePropagation();GRAND=!GRAND;peindreGrand();if(GRAND&&gristDoc()&&!AUTO){AUTO=setInterval(tic,10000);tic()}return}
+  if(a==='atpgrand'){e.stopImmediatePropagation();GRAND=!GRAND;peindreGrand();if(!GRAND)camArreter();if(GRAND&&gristDoc()&&!AUTO){AUTO=setInterval(tic,10000);tic()}return}
+  if(a==='atpborne'){e.stopImmediatePropagation();GRAND=true;peindreGrand();camDemarrer('user');if(gristDoc()&&!AUTO){AUTO=setInterval(tic,10000);tic()}return}
+  if(a==='atpcamface'){e.stopImmediatePropagation();camDemarrer(CAM&&CAM.face==='user'?'environment':'user');return}
   if(a==='atpref'){e.stopImmediatePropagation();const k=norm(classeL())+'|'+(DB.seance||1)+'|'+norm(b.dataset.n);R()[k]=Math.max(0,(R()[k]||0)+(+b.dataset.v));if(!R()[k])delete R()[k];sauver();rendre();return}
 },true);
 document.addEventListener('change',e=>{const t=e.target;
@@ -218,6 +257,12 @@ const css=document.createElement('style');css.textContent=`
 .ar-big.ko svg{animation:arko 1.4s .5s forwards}@keyframes arko{to{transform:rotate(90deg) translateY(10%);filter:grayscale(1) brightness(.6)}}
 .ar-big.saut svg{width:min(20vh,180px);height:min(20vh,180px);animation:arsaut .5s ease-in-out infinite alternate}@keyframes arsaut{to{transform:translateY(-14%)}}
 .ar-cont{display:grid;grid-template-columns:auto 1fr;column-gap:1vw}.ar-cont .ar-cav{grid-row:span 3}.ar-cont .ar-cav svg{width:9vh;height:9vh;image-rendering:pixelated}
+#borne-cam{position:fixed;left:2vw;bottom:7vh;z-index:70;width:min(30vw,300px);border:3px solid #ffe600;box-shadow:0 0 18px #ffe600;border-radius:14px;overflow:hidden;background:#000}
+#borne-cam video{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}#borne-cam video.miroir{transform:scaleX(-1)}
+#borne-cam .bc-vis{position:absolute;left:18%;right:18%;top:10%;aspect-ratio:1;border:3px dashed rgba(255,230,0,.8);border-radius:10px;pointer-events:none}
+#borne-cam .bc-msg{margin:0;padding:6px 8px;font:900 15px "Courier New",monospace;color:#ffe600;background:#07031a;text-align:center}
+#borne-cam .bc-msg.ok{color:#07031a;background:#4ade80}#borne-cam .bc-msg.err{color:#fff;background:#dc2626}
+#borne-cam .bc-bt{position:absolute;right:6px;top:6px}
 @media (prefers-reduced-motion:reduce){#atp-plein *{animation:none!important}}`;document.head.appendChild(css);
 
 window.ATPP={seuils,vATP,reglage,pourQR,depuisFichier,depuisQR,classement,lireGrist,palier,_peindre:()=>peindreGrand()};
