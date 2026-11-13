@@ -43,7 +43,10 @@ function classement(c,s){
   const L=(DB.classesL[c]||{}).eleves||[],tous=Object.values(M()).filter(m=>norm(m.classe)===norm(c));
   const seances=[...new Set(tous.map(m=>m.seance).concat(Object.keys(R()).filter(k=>k.startsWith(norm(c)+'|')).map(k=>+k.split('|')[1])))].filter(x=>x<=s).sort((a,b)=>a-b);
   const P={};L.forEach(n=>P[n]=0);let depart=null,jour={};
-  for(const x of seances.concat(seances.includes(s)?[]:[s])){
+  // Tablette « borne » alimentée par le QR de démarrage : points de départ reçus, pas d'historique des séances
+  const base=(DB.atpBase||{})[norm(c)];let SE=seances;
+  if(base&&s>=base.s){Object.entries(base.p||{}).forEach(([n,v])=>{const x=L.find(y=>norm(y)===norm(n))||n;P[x]=+v});SE=seances.filter(x=>x>=base.s)}
+  for(const x of SE.concat(SE.includes(s)?[]:[s])){
     if(x===s)depart=Object.assign({},P);
     const rk=G26.rangs(L,P),J={};
     tous.filter(m=>m.seance===x).sort((a,b)=>a.ts-b.ts).forEach(m=>{const w=m.sa>m.sb?m.a:m.b,l=w===m.a?m.b:m.a;
@@ -81,7 +84,7 @@ function vATP(){
   <div class="rangee noprint"><label class="small">Séance <select id="atp-s">${Array.from({length:12},(_,i)=>i+1).map(i=>`<option${i===s?' selected':''}>${i}</option>`).join('')}</select></label>
   ${g?`<button class="bt" type="button" data-act="atplire">↻ Actualiser depuis Grist</button><label class="small"><input type="checkbox" id="atp-auto"${AUTO?' checked':''}> toutes les 10 s</label>`:'<span class="small muted">Pas de Grist : les matchs arrivent avec les séances (Importer).</span>'}
   <button class="bt orange" type="button" data-act="atpborne">📷 Mode borne (tablette sur trépied)</button><button class="bt" type="button" data-act="atpgrand">⛶ Plein écran sans caméra</button></div>
-  <p class="small muted">Mode borne : le tableau en grand et la caméra allumée en bas à gauche. Après chaque match, l’arbitre y montre le QR affiché par son téléphone ; le classement et les effets se mettent à jour, même sans internet. Branche la tablette sur secteur.</p>
+  <p class="small muted">Mode borne : le tableau en grand et la caméra allumée en bas à gauche. Après chaque match, l’arbitre y montre le QR affiché par son téléphone ; le classement et les effets se mettent à jour, même sans internet. Branche la tablette sur secteur. <b>Borne sur une autre tablette que la tienne</b> : ouvre l’outil prof dessus, lance le mode borne et montre-lui le <b>QR de démarrage</b> de la classe (onglet Classes) : elle reçoit la liste, le classement de départ, les paliers et les avatars.</p>
   <p class="small muted">${nb} match${nb>1?'s':''} reçu${nb>1?'s':''} pour la séance ${s}${DB.atpLu&&g?' · Grist lu à '+new Date(DB.atpLu).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):''}. Barème d’Arnaud : de ${A.dessous[4]} à ${A.dessus[4]} points selon l’écart de rang au début de la séance, ${A.perdu} pour une défaite, ${A.refus} pour un refus.</p>
   <section class="carte">${tableau(c,s,K,false)}</section>
   <p class="small">Paliers (points cumulés) : 🥈 Argent dès <input type="number" class="g6pal" data-atppal="0" value="${seuils()[0]}" min="1">, 🥇 Or dès <input type="number" class="g6pal" data-atppal="1" value="${seuils()[1]}" min="1">, 💎 Diamant dès <input type="number" class="g6pal" data-atppal="2" value="${seuils()[2]}" min="1"> <span class="muted">(à ajuster après la 1re séance)</span></p>
@@ -155,11 +158,16 @@ function bip(ok){try{const A=new (window.AudioContext||window.webkitAudioContext
 function msgCam(t,ok){const m=document.querySelector('#borne-cam .bc-msg');if(!m)return;m.textContent=t;m.className='bc-msg'+(ok===true?' ok':ok===false?' err':'');clearTimeout(msgCam.t);msgCam.t=setTimeout(()=>{m.textContent='Montre le QR de ton match ici';m.className='bc-msg'},3500)}
 async function lu(txt){
   const q=await TTQR.decoder(txt),c=classeL();
-  if(q.c&&norm(q.c)!==norm(c))throw new Error('QR de la classe '+q.c+' : la borne affiche '+c+'.');
+  if(q.t!=='C'&&q.c&&norm(q.c)!==norm(c))throw new Error('QR de la classe '+q.c+' : la borne affiche '+c+'.');
   if(q.t==='A'){const neufs=(q.m||[]).filter(x=>!M()[x[0]]).length;depuisQR(q);
     if(+q.s!==(DB.seance||1)&&neufs){DB.seance=+q.s}sauver();
     if(!neufs){msgCam('Déjà compté ✓',true);bip(true);return}
     msgCam(neufs>1?neufs+' matchs ajoutés':'Match ajouté !',true);bip(true);peindreGrand();return}
+  if(q.t==='C'){ // QR de démarrage : alimente une tablette borne qui n'est pas celle du prof
+    const L=DB.classesL[q.c]||(DB.classesL[q.c]={eleves:[],lien:''});L.eleves=q.l||L.eleves;if(q.pa)L.pa=q.pa;if(q.pal)L.pal=q.pal;
+    if(q.atp){DB.atpBase=DB.atpBase||{};DB.atpBase[norm(q.c)]=q.atp;DB.seance=q.atp.s}if(q.ap)DB.atpPal=q.ap;
+    if(q.avs){const AVS=DB.avatars||(DB.avatars={});Object.entries(q.avs).forEach(([n,id])=>{const k=norm(q.c)+'|'+norm(n);if(!AVS[k])AVS[k]={id,ts:0}})}
+    DB.classe=q.c;sauver();VUS=null;peindreGrand();msgCam('Classe '+q.c+' chargée : '+(q.l||[]).length+' élèves'+(q.atp?', séance '+q.atp.s:''),true);bip(true);return}
   if(q.t==='V'){const AVS=DB.avatars||(DB.avatars={});AVS[norm(c)+'|'+norm(q.e)]={id:q.av,ts:q.ts||0};sauver();
     msgCam('Avatar de '+G26.court(q.e)+' : '+((window.G26AV&&G26AV.parId[q.av])||{n:q.av}).n,true);bip(true);peindreGrand();return}
   throw new Error('Ce QR n’est pas un match ATP.');
@@ -265,5 +273,5 @@ const css=document.createElement('style');css.textContent=`
 #borne-cam .bc-bt{position:absolute;right:6px;top:6px}
 @media (prefers-reduced-motion:reduce){#atp-plein *{animation:none!important}}`;document.head.appendChild(css);
 
-window.ATPP={seuils,vATP,reglage,pourQR,depuisFichier,depuisQR,classement,lireGrist,palier,_peindre:()=>peindreGrand()};
+window.ATPP={avatarsClasse:c=>{const o={};Object.entries(DB.avatars||{}).forEach(([k,v])=>{const [cc,n]=k.split('|');if(cc===norm(c)){const x=((DB.classesL[c]||{}).eleves||[]).find(y=>norm(y)===n);if(x)o[x]=v.id}});return Object.keys(o).length?o:undefined},seuils,vATP,reglage,pourQR,depuisFichier,depuisQR,classement,lireGrist,palier,_peindre:()=>peindreGrand(),_lu:t=>lu(t)};
 })();
