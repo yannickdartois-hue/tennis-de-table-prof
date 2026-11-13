@@ -11,7 +11,7 @@
 'use strict';
 const CL='DÉMO G26';
 const NOMS=['ARNAUD Lucas','BENOIT Emma','BLANC Hugo','BRUN Léa','CARON Nathan','CHEVALIER Inès','DUBOIS Tom','DURAND Zoé','FAURE Sacha','FONTAINE Chloé','GARNIER Enzo','GIRARD Manon','GUERIN Noah','HENRY Lina','LAMBERT Théo','LEROY Jade'];
-const r=alea(20261113),ent=(a,b)=>a+Math.floor(r()*(b-a+1)),pick=L=>L[Math.floor(r()*L.length)];
+const r=alea(20261113),r7=alea(7),ent=(a,b)=>a+Math.floor(r()*(b-a+1)),pick=L=>L[Math.floor(r()*L.length)];
 const niv={};NOMS.forEach((n,i)=>niv[n]=4+((i*5)%16)/2+r()*3); // niveau caché
 const gagne=(a,b)=>r()<1/(1+Math.exp((niv[b]-niv[a])*.45));
 const jour=s=>new Date(Date.now()-(6-s)*7*864e5).toISOString().slice(0,10);
@@ -40,7 +40,9 @@ function construire(){
     // Tournoi ATP : 5 séances de 3 à 4 matchs chacun
     d.atp={};let id=0,ts=1;
     for(let s=1;s<=5;s++)for(let m=0;m<20;m++){const a=pick(NOMS),b=pick(NOMS.filter(x=>x!==a)),w=gagne(a,b),l=ent(3,9);
-      d.atp['d'+(++id)]={id:'d'+id,classe:CL,seance:s,a,b,sa:w?11:l,sb:w?l:11,ts:ts++,src:'fichier'}}
+      d.atp['d'+(++id)]={id:'d'+id,classe:CL,seance:s,a,b,arb:NOMS.filter(x=>x!==a&&x!==b)[Math.floor(r7()*14)],sa:w?11:l,sb:w?l:11,ts:ts++,src:'fichier'}}
+    // étoile AFL2 / AFL3 déjà cochée pour 12 élèves sur 16
+    d.g6role={};NOMS.slice(0,12).forEach(n=>{const o={};G26.role.forEach(x=>o[x.k]=Math.max(1,Math.min(4,Math.round(niv[n]/3)+Math.floor(r7()*3)-1)));d.g6role[norm(CL)+'|'+norm(n)]=o});
     // avatars : chacun a choisi un personnage de son palier
     const K=ATPP.classement(CL,6);d.avatars={};
     NOMS.forEach(n=>{const p=G26AV.palier(K.depart[n]||0,d.atpPal),L=G26AV.AV.filter(a=>a.t<=p);d.avatars[norm(CL)+'|'+norm(n)]={id:pick(L.filter(a=>a.t===p).concat(L)).id,ts:1}});

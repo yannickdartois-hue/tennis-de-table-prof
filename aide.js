@@ -34,6 +34,9 @@ window.EPS_AIDE={appli:'Tennis de table · Outil prof',bouton:false,pied:'Toutes
 {t:'Mode borne (tablette sur trépied)',html:`<ol><li>Onglet <b>ATP</b> → <span class="bouton">📷 Mode borne</span> : tableau arcade en grand, caméra en bas à gauche (🔄 pour changer de caméra). Branchez la tablette sur secteur, son activé.</li>
 <li>Après chaque match, l’arbitre montre le QR de son téléphone : bip, effet (victoire, boss vaincu), classement à jour.</li>
 <li><b>Borne sur une autre tablette</b> : ouvrez l’outil prof dessus, lancez le mode borne et montrez-lui le <b>QR de démarrage</b> de la classe (liste, classement de départ, paliers, avatars).</li></ol>`},
+{t:'Étoile AFL2 / AFL3 et note GAREEPS',html:`<ul><li>Onglet <b>GAREEPS</b>, en bas : l’<b>étoile AFL2 / AFL3</b>, avec 6 descripteurs (projet de jeu, concentration, motivation, observateur, attitude, arbitrage) notés de 1 à 4. Les repères (projets écrits, SRP observées, matchs arbitrés) disent combien de fois, pas si c’était bien fait.</li>
+<li>Onglet <b>Note</b> : barème <b>GAREEPS 2026</b> (provisoire). L’AFL1 /12 = SRP /5 (2 meilleurs matchs) + polygone /5 (bonus de la dernière SCE et anneaux gagnés sur les priorités) + ATP /2. Pour la remplacer, écris ta note dans la case.</li>
+<li>AFL2 et AFL3 : tu choisis dans les fourchettes habituelles ; « D3 » rappelle le degré moyen de l’étoile.</li></ul>`},
 {t:'Démos pour les collègues',html:`<ul><li><b>…/tennis-de-table-prof/?demo=g26</b> : classe fictive de 16 élèves (SCE, SRP, STOM, ATP, avatars).</li>
 <li><span class="bouton">▶ Démo de la borne</span> : un faux match toutes les 7 secondes, idéal en salle des profs.</li>
 <li><b>…/tennis-de-table-eleves/?demo=g26</b> : l’appli élève sur le parcours GAREEPS 2026.</li></ul>`}]}
