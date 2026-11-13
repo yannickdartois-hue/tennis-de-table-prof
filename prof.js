@@ -427,7 +427,7 @@ async function importerListe(files,texte,classeDefaut){
 }
 async function qrDemarrage(c){
   const L=DB.classesL[c],k=await clePublique();if(!L.cc){L.cc=EPSCode.nouvelleCle();sauver()}const q={a:'TTE',v:1,t:'C',c,l:L.eleves,u:L.lien||'',k,cc:L.cc,cj:await EPSCode.cjDuJour('ttp',c,L.cc)};
-  if(window.G6P&&G6P.estG26(c)){q.pa='g26';q.pal=G6P.palDe(c);const h=G6P.histoire(c);if(Object.keys(h).length)q.h=h;if(DB.gristATP)q.gr=DB.gristATP;const at=window.ATPP&&ATPP.pourQR(c);if(at)q.atp=at} // parcours GAREEPS 2026
+  if(window.G6P&&G6P.estG26(c)){q.pa='g26';q.pal=G6P.palDe(c);const h=G6P.histoire(c);if(Object.keys(h).length)q.h=h;if(DB.gristATP)q.gr=DB.gristATP;const at=window.ATPP&&ATPP.pourQR(c);if(at)q.atp=at;if(window.ATPP)q.ap=ATPP.seuils()} // parcours GAREEPS 2026
   const txt=await TTQR.encoder(q);
   let svg;try{svg=TTQR.svgQR(txt)}catch(e){svg='<p class="avert">Liste trop longue pour un seul QR.</p>'}
   const d=document.createElement('div');d.className='qr-plein';

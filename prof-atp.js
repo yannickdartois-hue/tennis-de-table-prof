@@ -21,9 +21,11 @@ function ajouter(classe,seance,m,src){
   if(!m||!m.id||!m.a||!m.b)return;const x=M()[m.id];
   if(x&&x.src==='fichier'&&src!=='fichier')return; // le fichier du téléphone fait foi (noms complets)
   M()[m.id]={id:m.id,classe,seance:+seance,a:m.a,b:m.b,arb:m.arb||'',sa:+m.sa,sb:+m.sb,ts:+m.ts||0,src};
+  // avatar choisi par l'élève (le plus récent l'emporte)
+  const AVS=DB.avatars||(DB.avatars={});[[m.a,m.av1],[m.b,m.av2]].forEach(([n,id])=>{if(!id)return;const k=norm(classe)+'|'+norm(n),x=AVS[k];if(!x||(x.ts||0)<=(+m.ts||0))AVS[k]={id,ts:+m.ts||0}});
 }
 function depuisFichier(o){(o.matchs||[]).forEach(m=>ajouter(o.classe||'',o.seance,m,'fichier'));return (o.matchs||[]).length+' match(s) ATP'}
-function depuisQR(q){(q.m||[]).forEach(([id,a,b,arb,sa,sb,ts])=>ajouter(q.c||'',q.s,{id,a,b,arb,sa,sb,ts},'qr'));return (q.m||[]).length+' match(s) ATP · séance '+q.s}
+function depuisQR(q){(q.m||[]).forEach(([id,a,b,arb,sa,sb,ts,av1,av2])=>ajouter(q.c||'',q.s,{id,a,b,arb,sa,sb,ts,av1,av2},'qr'));return (q.m||[]).length+' match(s) ATP · séance '+q.s}
 // Grist : noms courts → noms de la liste de classe
 async function lireGrist(c){
   const g=gristDoc();if(!g)throw new Error('Pas de document Grist réglé (onglet Classes).');
@@ -31,7 +33,7 @@ async function lireGrist(c){
   if(r.status===404)return 0;if(!r.ok)throw new Error('Grist répond '+r.status);
   const L=(DB.classesL[c]||{}).eleves||[],C=G26.courts(L),inv={};Object.entries(C).forEach(([n,k])=>inv[k]=n);
   let n=0;(await r.json()).records.forEach(({fields:f})=>{if(!f.uid)return;const a=inv[f.j1]||f.j1,b=inv[f.j2]||f.j2;
-    if(!M()[f.uid])n++;ajouter(c,f.seance,{id:f.uid,a,b,arb:inv[f.arb]||f.arb||'',sa:f.s1,sb:f.s2,ts:f.ts},'grist')});
+    if(!M()[f.uid])n++;ajouter(c,f.seance,{id:f.uid,a,b,arb:inv[f.arb]||f.arb||'',sa:f.s1,sb:f.s2,ts:f.ts,av1:f.av1||'',av2:f.av2||''},'grist')});
   DB.atpLu=Date.now();sauver();return n;
 }
 
@@ -92,6 +94,7 @@ function palier(p){const S=seuils();const i=p>=S[2]?3:p>=S[1]?2:p>=S[0]?1:0;cons
 // Série en cours (victoires d'affilée dans la séance)
 function combos(c,s){const C={};Object.values(M()).filter(m=>norm(m.classe)===norm(c)&&m.seance===s).sort((a,b)=>a.ts-b.ts).forEach(m=>{const w=m.sa>m.sb?m.a:m.b,l=w===m.a?m.b:m.a;C[w]=(C[w]||0)+1;C[l]=0});return C}
 const fr=v=>(+v||0).toLocaleString('fr');
+const avDe=(c,n,px)=>window.G26AV?G26AV.html(((DB.avatars||{})[norm(c)+'|'+norm(n)]||{}).id,n,px):'';
 const ordinal=r=>r+(r===1?'ST':r===2?'ND':r===3?'RD':'TH');
 
 /* ---------- Plein écran façon borne d'arcade ---------- */
@@ -107,7 +110,7 @@ function peindreGrand(){
   else ms.slice().reverse().forEach(m=>{if(!VUS.has(m.id)){VUS.add(m.id);FILE.push(m)}});
   const ord=K.noms.slice().sort((x,y)=>K.rangT[x]-K.rangT[y]),nb=ord.length,col=nb>12?2:1;
   const lignes=ord.map(n=>{const r=K.rangT[n],j=K.jour[n]||{},P=palier(K.total[n]||0),d=K.rangD[n]-r,nouv=(AVANT[n]||r)-r>0;
-    return `<div class="ar-row${r===1?' r1':''}"><span class="rk">${ordinal(r)}</span><span class="nm">${esc(G26.court(n).toUpperCase())}${CB[n]>=2?` <span class="cb">COMBO×${CB[n]}</span>`:''}${nouv?' <span class="new">NEW!</span>':''}</span>
+    return `<div class="ar-row${r===1?' r1':''}"><span class="rk">${ordinal(r)}</span><span class="nm"><span class="ar-av">${avDe(c,n,64)}</span>${esc(G26.court(n).toUpperCase())}${CB[n]>=2?` <span class="cb">COMBO×${CB[n]}</span>`:''}${nouv?' <span class="new">NEW!</span>':''}</span>
     <span class="tier ${P.k}">${P.ic} ${P.n}</span><span class="xp"><i style="width:${P.xp}%"></i></span><span class="pt">${fr(K.total[n])}</span><span class="mv">${r===1?'👑':d>0?'<b class="up">▲'+d+'</b>':d<0?'<b class="dn">▼'+(-d)+'</b>':'='}</span></div>`}).join('');
   z.innerHTML=`<div class="ar-sun"></div><div class="ar-grid"></div>
   <div class="ar-hd"><h1>TOURNOI ATP · HIGH SCORES</h1><span class="live">● ${gristDoc()?'LIVE':'SCORES'} · ${esc(c)} · S${s}</span><button class="bt mini" type="button" data-act="atpgrand">Fermer</button></div>
@@ -126,17 +129,17 @@ async function jouer(){
     const w=m.sa>m.sb?m.a:m.b,l=w===m.a?m.b:m.a,rW=K.rangD[w]||nb,rL=K.rangD[l]||nb,gain=G26.atpGain(rW,rL);
     const boss=rL===1||rW-rL>=3,serre=Math.abs(m.sa-m.sb)<=2;const FX=h=>{const f=document.getElementById('ar-fx');if(f)f.innerHTML=h};if(!document.getElementById('ar-fx'))break;
     const W=esc(G26.court(w).toUpperCase()),L=esc(G26.court(l).toUpperCase()),sc=`${Math.max(m.sa,m.sb)}-${Math.min(m.sa,m.sb)}`;
-    const cont=`<div class="ar-cont"><div class="t">CONTINUE ? ▶ YES</div><p>${esc(G26.court(l))} a tout donné${serre?` : ${sc}, à ${Math.abs(m.sa-m.sb)} point${Math.abs(m.sa-m.sb)>1?'s':''} !`:'.'}</p><div class="g">+${fr(A.perdu)} XP · BONUS COURAGE 💪</div></div>`;
+    const cont=`<div class="ar-cont"><div class="ar-cav">${avDe(c,l,72)}</div><div class="t">CONTINUE ? ▶ YES</div><p>${esc(G26.court(l))} a tout donné${serre?` : ${sc}, à ${Math.abs(m.sa-m.sb)} point${Math.abs(m.sa-m.sb)>1?'s':''} !`:'.'}</p><div class="g">+${fr(A.perdu)} XP · BONUS COURAGE 💪</div></div>`;
     if(boss){
       const etoiles=['7%;top:16%','88%;top:20%','12%;top:72%','84%;top:74%','48%;top:6%','30%;top:84%'].map((p,i)=>`<span class="star" style="left:${p};animation-delay:${i*.15}s">${['⭐','🌟','✨'][i%3]}</span>`).join('');
       FX(`<div class="ar-ov boss"><div><div class="bt">BOSS VAINCU !</div>
-      <div class="vs"><div class="pc gw"><small>PLAYER · ${ordinal(rW)}</small><b>${W}</b><div class="hp"><i style="width:${Math.round(100*Math.max(m.sa,m.sb)/11)}%;background:#4ade80"></i></div></div><span class="vsx">VS</span>
-      <div class="pc gl"><small>BOSS · ${ordinal(rL)}${rL===1?' 👑':''}</small><b>${L}</b><div class="hp"><i class="vide"></i></div></div></div>
+      <div class="vs"><div class="pc gw"><div class="ar-big">${avDe(c,w,120)}</div><small>PLAYER · ${ordinal(rW)}</small><b>${W}</b><div class="hp"><i style="width:${Math.round(100*Math.max(m.sa,m.sb)/11)}%;background:#4ade80"></i></div></div><span class="vsx">VS</span>
+      <div class="pc gl"><div class="ar-big ko">${avDe(c,l,120)}</div><small>BOSS · ${ordinal(rL)}${rL===1?' 👑':''}</small><b>${L}</b><div class="hp"><i class="vide"></i></div></div></div>
       <div class="gain">+${fr(gain)} XP</div><div class="lvup">★ RANK UP · ${ordinal(K.rangT[w])} ★</div></div>${etoiles}</div>`);
       await attendre(4200);
     }else{
       const pieces=Array.from({length:9},(_,i)=>`<span class="coin" style="left:${12+i*9}%;animation-delay:${(i%4)*.12}s">★</span>`).join('');
-      FX(`<div class="ar-ov vic"><div><div class="bt">VICTOIRE !</div><div class="qui">${W} <span>${sc} · CONTRE ${L}</span></div>
+      FX(`<div class="ar-ov vic"><div><div class="ar-big saut">${avDe(c,w,150)}</div><div class="bt">VICTOIRE !</div><div class="qui">${W} <span>${sc} · CONTRE ${L}</span></div>
       <div class="gain">+${fr(gain)} XP</div>${CB[w]>=2?`<div class="combo">COMBO ×${CB[w]} 🔥</div>`:''}</div>${pieces}</div>`);
       await attendre(2600);
     }
@@ -210,7 +213,12 @@ const css=document.createElement('style');css.textContent=`
 .ar-cont .t{font:900 clamp(18px,3.8vh,40px) "Courier New";color:#e9d5ff;text-shadow:0 0 10px #a855f7}.ar-cont p{font:700 clamp(14px,2.4vh,24px) Atkinson,Arial;color:#ddd6fe;margin:.6vh 0 0}
 .ar-cont .g{font:900 clamp(16px,3.2vh,34px) "Courier New";color:#c4b5fd;margin-top:.8vh}
 #atp-plein .bt.mini{position:relative;z-index:25}
+.ar-row .nm{display:flex;align-items:center;gap:.35em}.ar-av svg{width:1.5em;height:1.5em;display:block;image-rendering:pixelated}
+.ar-big svg{display:block;margin:0 auto .6vh;width:min(16vh,150px);height:min(16vh,150px);image-rendering:pixelated;filter:drop-shadow(0 0 10px rgba(255,255,255,.35))}
+.ar-big.ko svg{animation:arko 1.4s .5s forwards}@keyframes arko{to{transform:rotate(90deg) translateY(10%);filter:grayscale(1) brightness(.6)}}
+.ar-big.saut svg{width:min(20vh,180px);height:min(20vh,180px);animation:arsaut .5s ease-in-out infinite alternate}@keyframes arsaut{to{transform:translateY(-14%)}}
+.ar-cont{display:grid;grid-template-columns:auto 1fr;column-gap:1vw}.ar-cont .ar-cav{grid-row:span 3}.ar-cont .ar-cav svg{width:9vh;height:9vh;image-rendering:pixelated}
 @media (prefers-reduced-motion:reduce){#atp-plein *{animation:none!important}}`;document.head.appendChild(css);
 
-window.ATPP={vATP,reglage,pourQR,depuisFichier,depuisQR,classement,lireGrist,palier,_peindre:()=>peindreGrand()};
+window.ATPP={seuils,vATP,reglage,pourQR,depuisFichier,depuisQR,classement,lireGrist,palier,_peindre:()=>peindreGrand()};
 })();
