@@ -11,6 +11,7 @@
 'use strict';
 const CL='DÉMO G26';
 const NOMS=['ARNAUD Lucas','BENOIT Emma','BLANC Hugo','BRUN Léa','CARON Nathan','CHEVALIER Inès','DUBOIS Tom','DURAND Zoé','FAURE Sacha','FONTAINE Chloé','GARNIER Enzo','GIRARD Manon','GUERIN Noah','HENRY Lina','LAMBERT Théo','LEROY Jade'];
+const ABS6=['FAURE Sacha','HENRY Lina'],ICI=NOMS.filter(n=>!ABS6.includes(n));
 const r=alea(20261113),r7=alea(7),ent=(a,b)=>a+Math.floor(r()*(b-a+1)),pick=L=>L[Math.floor(r()*L.length)];
 const niv={};NOMS.forEach((n,i)=>niv[n]=4+((i*5)%16)/2+r()*3); // niveau caché
 const gagne=(a,b)=>r()<1/(1+Math.exp((niv[b]-niv[a])*.45));
@@ -41,6 +42,8 @@ function construire(){
     d.atp={};let id=0,ts=1;
     for(let s=1;s<=5;s++)for(let m=0;m<20;m++){const a=pick(NOMS),b=pick(NOMS.filter(x=>x!==a)),w=gagne(a,b),l=ent(3,9);
       d.atp['d'+(++id)]={id:'d'+id,classe:CL,seance:s,a,b,arb:NOMS.filter(x=>x!==a&&x!==b)[Math.floor(r7()*14)],sa:w?11:l,sb:w?l:11,ts:ts++,src:'fichier'}}
+    // séance 6 : 2 absents (règle des absents du tournoi ATP)
+    d.appel=d.appel||{};ABS6.forEach(n=>d.appel[norm(CL)+'|6|'+norm(CL)+'|'+norm(n)]='absent');
     // étoile AFL2 / AFL3 déjà cochée pour 12 élèves sur 16
     d.g6role={};NOMS.slice(0,12).forEach(n=>{const o={};G26.role.forEach(x=>o[x.k]=Math.max(1,Math.min(4,Math.round(niv[n]/3)+Math.floor(r7()*3)-1)));d.g6role[norm(CL)+'|'+norm(n)]=o});
     // avatars : chacun a choisi un personnage de son palier
@@ -64,7 +67,7 @@ function demoBorne(){
   const coup=()=>{if(!document.getElementById('atp-plein')||!DEMO){clearInterval(TIMER);TIMER=null;return}
     const K=ATPP.classement(CL,6),ord=NOMS.slice().sort((x,y)=>K.rangD[x]-K.rangD[y]);
     // de temps en temps un exploit : un joueur du bas bat un du haut
-    let a,b;n++;if(n%3===0){a=ord[ent(7,15)];b=ord[ent(0,2)]}else{a=pick(NOMS);b=pick(NOMS.filter(x=>x!==a))}
+    let a,b;n++;const O=ord.filter(x=>ICI.includes(x));if(n%3===0){a=O[ent(7,O.length-1)];b=O[ent(0,2)]}else{a=pick(ICI);b=pick(ICI.filter(x=>x!==a))}
     const w=n%3===0?true:gagne(a,b),l=ent(4,10),i='z'+Date.now();
     DB.atp[i]={id:i,classe:CL,seance:6,a,b,sa:w?11:l,sb:w?l:11,ts:Math.round(Date.now()/1000),src:'qr'};ATPP._peindre()};
   setTimeout(coup,1500);TIMER=setInterval(coup,7000);

@@ -150,6 +150,13 @@ G26.courts=L=>{const m={},cnt={};L.forEach(n=>{const c=G26.court(n);cnt[c]=(cnt[
   L.forEach(n=>{let c=G26.court(n);if(cnt[c]>1){const w=String(n).trim().split(/\s+/),nom=w.find(x=>x.length>1&&x===x.toUpperCase())||w[w.length-1];c=c.replace(/ .\.$/,' '+nom.slice(0,3).toUpperCase()+'.')}m[n]=c});return m};
 // Classement ATP : points cumulés (objet nom → points), égalité départagée par l'ordre de la liste
 G26.rangs=(L,pts)=>{const o=L.map((n,i)=>({n,i,p:+((pts||{})[n]||0)})).sort((a,b)=>b.p-a.p||a.i-b.i),r={};o.forEach((x,k)=>r[x.n]=k+1);return r};
+// Rangs servant au calcul des points ATP (règle des absents, décidée le 13/11/2026) :
+// - les absents et dispensés du jour ne comptent pas dans l'écart (sauf s'ils ont joué quand même) ;
+// - à points égaux, rang égal (1re séance : tout le monde à 0, écart 0, et non l'ordre alphabétique).
+G26.nrm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+G26.rangsG=(L,pts,abs,joue)=>{const A=new Set((abs||[]).map(G26.nrm)),J=new Set((joue||[]).map(G26.nrm)),P=pts||{},r={};
+  const ici=L.filter(n=>!A.has(G26.nrm(n))||J.has(G26.nrm(n)));
+  ici.forEach(n=>{const p=+(P[n]||0);r[n]=1+ici.filter(x=>+(P[x]||0)>p).length});return r};
 G26.brK=Object.fromEntries(G26.br.map(b=>[b.k,b]));
 // Score parlant d'un match de SRP et son degré
 G26.degre=s=>s>=G26.degres[2]?4:s>=G26.degres[1]?3:s>=G26.degres[0]?2:1;

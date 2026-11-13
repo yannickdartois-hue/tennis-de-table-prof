@@ -30,6 +30,8 @@ window.EPS_AIDE={appli:'Tennis de table · Outil prof',bouton:false,pied:'Toutes
 {t:'Tournoi ATP et Grist (en direct)',html:`<ul><li>Barème d’Arnaud : 5,5 à 1 point selon l’écart de rang au début de la séance, 0,5 pour une défaite, −2 pour un refus (bouton « −2 » de l’onglet <b>ATP</b>).</li>
 <li><b>Direct par internet</b> : un seul document Grist pour toutes les classes, partagé en « Accès public : éditeur » (aucune clé). Collez son adresse dans Classes → « Tournoi ATP en direct », puis refaites scanner le QR de démarrage. Seuls prénom et initiale vont dans Grist.</li>
 <li>Sans internet, les matchs arrivent par la borne ou avec l’envoi des séances. Un match n’est jamais compté deux fois.</li>
+<li><b>Absents</b> : les élèves notés absents ou dispensés dans l’onglet <b>Appel</b> ne comptent pas dans l’écart de rang (sauf s’ils jouent quand même). <b>Fais l’appel avant de montrer le QR de démarrage</b> : c’est lui qui donne la liste aux téléphones et à une borne sur une autre tablette. À points égaux, rang égal (1re séance : 3 points par victoire).</li>
+<li><b>Refus</b> : avec Grist, le −2 part aussi vers les téléphones connectés ; sinon il apparaît au cours suivant.</li>
 <li>Paliers des avatars (onglet ATP) : 10 / 20 / 30 points par défaut, à ajuster après la 1re séance.</li></ul>`},
 {t:'Mode borne (tablette sur trépied)',html:`<ol><li>Onglet <b>ATP</b> → <span class="bouton">📷 Mode borne</span> : tableau arcade en grand, caméra en bas à gauche (🔄 pour changer de caméra). Branchez la tablette sur secteur, son activé.</li>
 <li>Après chaque match, l’arbitre montre le QR de son téléphone : bip, effet (victoire, boss vaincu), classement à jour.</li>

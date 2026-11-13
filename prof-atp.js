@@ -32,24 +32,45 @@ async function lireGrist(c){
   const r=await fetch(g.base+'/api/docs/'+g.id+'/tables/'+A.table+'/records?filter='+encodeURIComponent(JSON.stringify({classe:[c]})));
   if(r.status===404)return 0;if(!r.ok)throw new Error('Grist répond '+r.status);
   const L=(DB.classesL[c]||{}).eleves||[],C=G26.courts(L),inv={};Object.entries(C).forEach(([n,k])=>inv[k]=n);
-  let n=0;(await r.json()).records.forEach(({fields:f})=>{if(!f.uid)return;const a=inv[f.j1]||f.j1,b=inv[f.j2]||f.j2;
+  let n=0;(await r.json()).records.forEach(({fields:f})=>{if(!f.uid||f.j2==='REFUS')return; // lignes « REFUS » : écrites par cet outil pour les téléphones
+const a=inv[f.j1]||f.j1,b=inv[f.j2]||f.j2;
     if(!M()[f.uid])n++;ajouter(c,f.seance,{id:f.uid,a,b,arb:inv[f.arb]||f.arb||'',sa:f.s1,sb:f.s2,ts:f.ts,av1:f.av1||'',av2:f.av2||''},'grist')});
   DB.atpLu=Date.now();sauver();return n;
 }
 
+// Refus de la séance → Grist (une ligne par élève, j2 = « REFUS », s1 = nombre), pour les téléphones en ligne
+async function envoyerRefus(c){
+  const g=gristDoc();if(!g||!c||!navigator.onLine)return;
+  const L=(DB.classesL[c]||{}).eleves||[],C=G26.courts(L),E=DB.atpRefusGr||(DB.atpRefusGr={}),rec=[];
+  const cles=new Set(Object.keys(R()).concat(Object.keys(E)).filter(k=>k.startsWith(norm(c)+'|')));
+  cles.forEach(k=>{const nb=R()[k]||0;if((E[k]||0)===nb)return;const [,ss,nn]=k.split('|'),n=L.find(y=>norm(y)===nn)||nn;
+    rec.push({k,nb,r:{require:{uid:'R|'+k},fields:{classe:c,seance:+ss,date:new Date().toISOString().slice(0,10),j1:C[n]||G26.court(n),j2:'REFUS',s1:nb,s2:0,arb:'',ts:Math.round(Date.now()/1000)}}})});
+  if(!rec.length)return;
+  try{const r=await fetch(g.base+'/api/docs/'+g.id+'/tables/'+A.table+'/records',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({records:rec.map(x=>x.r)})});
+    if(r.ok){rec.forEach(x=>{if(x.nb)E[x.k]=x.nb;else delete E[x.k]});sauver()}}catch(e){}
+}
 /* ---------- Calcul du classement ---------- */
 // Renvoie {depart:{nom:pts}, jour:{nom:{pts,v,d,ref}}, total, rangD, rangT} pour la séance s
+// Absents et dispensés du jour (onglet Appel, ou QR de démarrage reçu par une tablette borne)
+const ABS=['absent','abj','disp'];
+function absents(c,s){
+  const L=(DB.classesL[c]||{}).eleves||[],ap=DB.appel||{};
+  const A=L.filter(n=>ABS.includes(ap[norm(c)+'|'+s+'|'+cleEleve(c,n)]));
+  const base=(DB.atpBase||{})[norm(c)];if(!A.length&&base&&base.s===s&&base.ab)return base.ab.slice();
+  return A;
+}
 function classement(c,s){
   const L=(DB.classesL[c]||{}).eleves||[],tous=Object.values(M()).filter(m=>norm(m.classe)===norm(c));
   const seances=[...new Set(tous.map(m=>m.seance).concat(Object.keys(R()).filter(k=>k.startsWith(norm(c)+'|')).map(k=>+k.split('|')[1])))].filter(x=>x<=s).sort((a,b)=>a-b);
-  const P={};L.forEach(n=>P[n]=0);let depart=null,jour={};
+  const P={};L.forEach(n=>P[n]=0);let depart=null,jour={},rangG=null;
   // Tablette « borne » alimentée par le QR de démarrage : points de départ reçus, pas d'historique des séances
   const base=(DB.atpBase||{})[norm(c)];let SE=seances;
   if(base&&s>=base.s){Object.entries(base.p||{}).forEach(([n,v])=>{const x=L.find(y=>norm(y)===norm(n))||n;P[x]=+v});SE=seances.filter(x=>x>=base.s)}
   for(const x of SE.concat(SE.includes(s)?[]:[s])){
     if(x===s)depart=Object.assign({},P);
-    const rk=G26.rangs(L,P),J={};
-    tous.filter(m=>m.seance===x).sort((a,b)=>a.ts-b.ts).forEach(m=>{const w=m.sa>m.sb?m.a:m.b,l=w===m.a?m.b:m.a;
+    const MX=tous.filter(m=>m.seance===x),rk=G26.rangsG(L,P,absents(c,x),MX.flatMap(m=>[m.a,m.b])),J={};
+    if(x===s)rangG=rk;
+    MX.sort((a,b)=>a.ts-b.ts).forEach(m=>{const w=m.sa>m.sb?m.a:m.b,l=w===m.a?m.b:m.a;
       [w,l].forEach(n=>{J[n]=J[n]||{pts:0,v:0,d:0,ref:0};if(P[n]==null)P[n]=0});
       const gn=G26.atpGain(rk[w]||L.length,rk[l]||L.length);J[w].pts+=gn;J[w].v++;J[l].pts+=A.perdu;J[l].d++});
     Object.entries(R()).forEach(([k,nb])=>{const [cc,ss,nn]=k.split('|');if(cc===norm(c)&&+ss===x){const n=L.find(y=>norm(y)===nn)||nn;J[n]=J[n]||{pts:0,v:0,d:0,ref:0};J[n].ref+=nb;J[n].pts+=A.refus*nb}});
@@ -57,15 +78,16 @@ function classement(c,s){
     if(x===s){jour=J;break}
   }
   if(!depart)depart=Object.assign({},P);
+  if(!rangG)rangG=G26.rangsG(L,depart,absents(c,s),[]);
   const total={};Object.keys(Object.assign({},depart,P)).forEach(n=>total[n]=(depart[n]||0)+((jour[n]||{}).pts||0));
   const noms=L.length?L:Object.keys(total);
-  return {depart,jour,total,rangD:G26.rangs(noms,depart),rangT:G26.rangs(noms,total),noms};
+  return {depart,jour,total,rangD:G26.rangs(noms,depart),rangT:G26.rangs(noms,total),rangG,abs:absents(c,s),noms};
 }
 // Points de départ de la PROCHAINE séance (pour le QR de démarrage)
 function pourQR(c){
   const tous=Object.values(M()).filter(m=>norm(m.classe)===norm(c));if(!tous.length)return null;
   const der=Math.max(...tous.map(m=>m.seance)),K=classement(c,der+1);
-  const p={};Object.entries(K.depart).forEach(([n,v])=>{if(v)p[n]=Math.round(v*10)/10});return {s:der+1,p};
+  const p={};Object.entries(K.depart).forEach(([n,v])=>{if(v)p[n]=Math.round(v*10)/10});const o={s:der+1,p},ab=absents(c,der+1);if(ab.length)o.ab=ab;return o;
 }
 
 /* ---------- Onglet ATP ---------- */
@@ -86,6 +108,7 @@ function vATP(){
   <button class="bt orange" type="button" data-act="atpborne">📷 Mode borne (tablette sur trépied)</button><button class="bt" type="button" data-act="atpgrand">⛶ Plein écran sans caméra</button></div>
   <p class="small muted">Mode borne : le tableau en grand et la caméra allumée en bas à gauche. Après chaque match, l’arbitre y montre le QR affiché par son téléphone ; le classement et les effets se mettent à jour, même sans internet. Branche la tablette sur secteur. <b>Borne sur une autre tablette que la tienne</b> : ouvre l’outil prof dessus, lance le mode borne et montre-lui le <b>QR de démarrage</b> de la classe (onglet Classes) : elle reçoit la liste, le classement de départ, les paliers et les avatars.</p>
   <p class="small muted">${nb} match${nb>1?'s':''} reçu${nb>1?'s':''} pour la séance ${s}${DB.atpLu&&g?' · Grist lu à '+new Date(DB.atpLu).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):''}. Barème d’Arnaud : de ${A.dessous[4]} à ${A.dessus[4]} points selon l’écart de rang au début de la séance, ${A.perdu} pour une défaite, ${A.refus} pour un refus.</p>
+  <p class="small${K.abs.length?'':' muted'}">${K.abs.length?`<b>Absents ou dispensés (onglet Appel, séance ${s}) :</b> ${K.abs.map(n=>esc(prenom(n))).join(', ')}. Ils ne comptent pas dans l’écart de rang.`:`Règle des absents : les élèves notés absents ou dispensés dans l’onglet <b>Appel</b> (séance ${s}) ne comptent pas dans l’écart de rang. Fais l’appel <b>avant</b> de montrer le QR de démarrage pour que les téléphones le sachent.`} À points égaux, rang égal.</p>
   <section class="carte">${tableau(c,s,K,false)}</section>
   <p class="small">Paliers (points cumulés) : 🥈 Argent dès <input type="number" class="g6pal" data-atppal="0" value="${seuils()[0]}" min="1">, 🥇 Or dès <input type="number" class="g6pal" data-atppal="1" value="${seuils()[1]}" min="1">, 💎 Diamant dès <input type="number" class="g6pal" data-atppal="2" value="${seuils()[2]}" min="1"> <span class="muted">(à ajuster après la 1re séance)</span></p>
   <p class="small muted">Le classement de départ de la séance suivante part dans le QR de démarrage (onglet Classes) : fais-le rescanner en début de cours pour que les téléphones l’affichent.</p>`;
@@ -121,7 +144,7 @@ function peindreGrand(){
   z.innerHTML=`<div class="ar-sun"></div><div class="ar-grid"></div>
   <div class="ar-hd"><h1>TOURNOI ATP · HIGH SCORES</h1><span class="live">● ${gristDoc()?'LIVE':'SCORES'} · ${esc(c)} · S${s}</span><button class="bt mini" type="button" data-act="atpgrand">Fermer</button></div>
   <div class="ar-tb ar-c${col}">${cols.map(L=>`<div class="ar-col">${tete}${L.map(ligne).join('')}</div>`).join('')}</div>
-  <div class="ar-tick">${ms.slice(0,6).map(m=>{const w=m.sa>m.sb?m.a:m.b,l=w===m.a?m.b:m.a;return `▶ ${esc(G26.court(w).toUpperCase())} BAT ${esc(G26.court(l).toUpperCase())} ${Math.max(m.sa,m.sb)}-${Math.min(m.sa,m.sb)} +${fr(G26.atpGain(K.rangD[w]||nb,K.rangD[l]||nb))} XP`}).join(' ')||'▶ EN ATTENTE DES PREMIERS MATCHS… INSERT COIN'}</div>
+  <div class="ar-tick">${ms.slice(0,6).map(m=>{const w=m.sa>m.sb?m.a:m.b,l=w===m.a?m.b:m.a;return `▶ ${esc(G26.court(w).toUpperCase())} BAT ${esc(G26.court(l).toUpperCase())} ${Math.max(m.sa,m.sb)}-${Math.min(m.sa,m.sb)} +${fr(G26.atpGain(K.rangG[w]||nb,K.rangG[l]||nb))} XP`}).join(' ')||'▶ EN ATTENTE DES PREMIERS MATCHS… INSERT COIN'}</div>
   <div class="ar-scan"></div><div id="ar-fx"></div>`;
   document.getElementById('ar-fx').innerHTML=fxAvant;
   AVANT=Object.assign({},K.rangT);
@@ -132,8 +155,8 @@ async function jouer(){
   EN_COURS=true;
   while(FILE.length&&GRAND){
     const m=FILE.shift(),c=classeL(),s=DB.seance||1,K=classement(c,s),CB=combos(c,s),nb=K.noms.length;
-    const w=m.sa>m.sb?m.a:m.b,l=w===m.a?m.b:m.a,rW=K.rangD[w]||nb,rL=K.rangD[l]||nb,gain=G26.atpGain(rW,rL);
-    const boss=rL===1||rW-rL>=3,serre=Math.abs(m.sa-m.sb)<=2;const FX=h=>{const f=document.getElementById('ar-fx');if(f)f.innerHTML=h};if(!document.getElementById('ar-fx'))break;
+    const w=m.sa>m.sb?m.a:m.b,l=w===m.a?m.b:m.a,rW=K.rangG[w]||nb,rL=K.rangG[l]||nb,gain=G26.atpGain(rW,rL);
+    const boss=(rL===1&&(K.depart[l]||0)>0)||rW-rL>=3,serre=Math.abs(m.sa-m.sb)<=2;const FX=h=>{const f=document.getElementById('ar-fx');if(f)f.innerHTML=h};if(!document.getElementById('ar-fx'))break;
     const W=esc(G26.court(w).toUpperCase()),L=esc(G26.court(l).toUpperCase()),sc=`${Math.max(m.sa,m.sb)}-${Math.min(m.sa,m.sb)}`;
     const cont=`<div class="ar-cont"><div class="ar-cav">${avDe(c,l,72)}</div><div class="t">CONTINUE ? ▶ YES</div><p>${esc(G26.court(l))} a tout donné${serre?` : ${sc}, à ${Math.abs(m.sa-m.sb)} point${Math.abs(m.sa-m.sb)>1?'s':''} !`:'.'}</p><div class="g">+${fr(A.perdu)} XP · BONUS COURAGE 💪</div></div>`;
     if(boss){
@@ -194,7 +217,7 @@ async function camDemarrer(face){
 }
 function camArreter(){if(!CAM&&!document.getElementById('borne-cam'))return;if(CAM){clearTimeout(CAM.timer);if(CAM.stream)CAM.stream.getTracks().forEach(t=>t.stop());try{CAM.wake&&CAM.wake.release()}catch(e){}}CAM=null;const z=document.getElementById('borne-cam');if(z)z.remove()}
 
-async function tic(){const c=classeL();if(!c)return;try{await lireGrist(c)}catch(e){}if(GRAND)peindreGrand();else if(DB.vue==='atp')rendre()}
+async function tic(){const c=classeL();if(!c)return;try{await lireGrist(c)}catch(e){}envoyerRefus(c);if(GRAND)peindreGrand();else if(DB.vue==='atp')rendre()}
 
 /* ---------- Réglage du lien Grist (onglet Classes) ---------- */
 function reglage(){
@@ -209,7 +232,7 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-act]
   if(a==='atpgrand'){e.stopImmediatePropagation();GRAND=!GRAND;peindreGrand();if(!GRAND)camArreter();if(GRAND&&gristDoc()&&!AUTO){AUTO=setInterval(tic,10000);tic()}return}
   if(a==='atpborne'){e.stopImmediatePropagation();GRAND=true;peindreGrand();camDemarrer('user');if(gristDoc()&&!AUTO){AUTO=setInterval(tic,10000);tic()}return}
   if(a==='atpcamface'){e.stopImmediatePropagation();camDemarrer(CAM&&CAM.face==='user'?'environment':'user');return}
-  if(a==='atpref'){e.stopImmediatePropagation();const k=norm(classeL())+'|'+(DB.seance||1)+'|'+norm(b.dataset.n);R()[k]=Math.max(0,(R()[k]||0)+(+b.dataset.v));if(!R()[k])delete R()[k];sauver();rendre();return}
+  if(a==='atpref'){e.stopImmediatePropagation();const k=norm(classeL())+'|'+(DB.seance||1)+'|'+norm(b.dataset.n);R()[k]=Math.max(0,(R()[k]||0)+(+b.dataset.v));if(!R()[k])delete R()[k];sauver();rendre();envoyerRefus(classeL());return}
 },true);
 document.addEventListener('change',e=>{const t=e.target;
   if(t.id==='atp-s'){DB.seance=+t.value;sauver();rendre()}
