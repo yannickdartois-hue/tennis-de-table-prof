@@ -34,19 +34,21 @@ function reperes(c,k,nom){
 // AFL1 : trois parts calculées
 // Poids de l'AFL1 (réglables par classe) : SRP, polygone niveau, polygone progression, ATP. Total attendu : 12.
 const W0={srp:5,pn:3,pp:2,atp:2};
+const PLEIN=75; // % des points gagnés avec un bonus qui donne tous les points de « polygone niveau »
 function poids(){const C=cfgNote();return Object.assign({},W0,C.g6w||{})}
 function afl1(c,k,nom,K){
   const W=poids();
   // SRP : moyenne des degrés des 2 meilleurs matchs complets (degré 4 = tous les points)
   const S=srpEleve(k).map(scoreSRP).filter(s=>s.fini).sort((a,b)=>b.sc-a.sc).slice(0,2);
   const srp=!W.srp?0:S.length?q4(W.srp*S.reduce((a,s)=>a+s.deg,0)/S.length/4):null;
-  // Polygone /5 : 3 points pour le total de bonus de la dernière SCE (plein à 2 × dernier palier),
-  // 2 points de progression sur les branches choisies en priorité (0,5 par anneau gagné)
+  // Polygone : niveau = part des points gagnés AVEC un bonus à la dernière SCE (tous les points dès 75 %),
+  // progression = anneaux gagnés (en %) sur les branches choisies en priorité après la 1re SCE
   const H=G6P.histoire(c),h=(Object.entries(H).find(([x])=>memeNom(x,nom))||[])[1],pal=G6P.palDe(c);
-  let poly=null,prog=null,nS=0,bon=null;
+  let poly=null,prog=null,nS=0,bon=null,part=null;
+  const pc=n=>{const v=h.s[n],pts=h.p&&h.p[n]!=null?h.p[n]:v.reduce((a,x)=>a+x,0);return {v:G26.pct(v,pts),pts,b:v.reduce((a,x)=>a+x,0)}};
   if(h&&h.s){const N=Object.keys(h.s).map(Number).sort((a,b)=>a-b);nS=N.length;
-    if(N.length){const F=h.s[N[N.length-1]],D=h.s[N[0]];bon=F.reduce((a,x)=>a+x,0);
-      const fin=W.pn*Math.min(1,bon/(2*pal[2]));
+    if(N.length){const Fx=pc(N[N.length-1]),F=Fx.v,D=pc(N[0]).v;bon=Fx.b;part=Fx.pts?Math.round(100*Fx.b/Fx.pts):0;
+      const fin=W.pn*Math.min(1,part/PLEIN);
       const t1=tables(c).filter(t=>t.sce===N[0]).map(t=>({t,p:t.joueurs.findIndex(j=>memeNom(j,nom))})).find(x=>x.p>=0);
       const ch1=t1&&t1.t.bil&&t1.t.bil[t1.p]; // priorités choisies après la 1re SCE
       const B=(ch1&&ch1.length?ch1:KS).map(x=>KS.indexOf(x)).filter(i=>i>=0);
@@ -60,7 +62,7 @@ function afl1(c,k,nom,K){
     atp=joue&&rang?q4(W.atp*(n>1?.5+.5*(n-rang)/(n-1):1)):0}
   if(!W.atp)atp=0;
   const parts=[srp,poly,atp],tot=parts.every(v=>v!=null)?q4(parts.reduce((a,v)=>a+v,0)):null;
-  return {srp,poly,prog,nS,bon,atp,rang,tot,nbSRP:S.length};
+  return {srp,poly,prog,nS,bon,part,atp,rang,tot,nbSRP:S.length};
 }
 // Degré suggéré pour AFL2 ou AFL3 d'après l'étoile
 function degreEtoile(k,afl){const E=ROLE()[k]||{},V=G26.role.filter(r=>r.afl===afl).map(r=>E[r.k]).filter(v=>v);
@@ -116,7 +118,7 @@ function vNoteG(){
     ${SW!==12?`<p class="small alerte">Total des poids : ${dW(SW)} au lieu de 12. Le total sur 20 sera faux tant que ce n’est pas corrigé.</p>`:`<p class="small muted">Total : 12 ✓. Mets 0 pour ne pas compter une part.</p>`}
     <ul class="small">
       <li><b>SRP /${dW(W.srp)}</b> : moyenne des degrés des 2 meilleurs matchs complets (degré 4 = tous les points).</li>
-      <li><b>Polygone niveau /${dW(W.pn)}</b> : total de bonus à la dernière SCE, tous les points dès ${2*G6P.palDe(c)[2]} bonus (2 × le dernier palier).</li>
+      <li><b>Polygone niveau /${dW(W.pn)}</b> : part des points gagnés avec un bonus à la dernière SCE ; tous les points dès ${PLEIN} %. Un élève qui gagne peu de points n’est pas pénalisé : c’est la manière qui compte.</li>
       <li><b>Polygone progression /${dW(W.pp)}</b> : ${dW(W.pp/4)} par anneau gagné depuis la 1re SCE sur les branches choisies en priorité (une branche déjà au dernier anneau compte comme gagnée).</li>
       <li><b>ATP /${dW(W.atp)}</b> : de ${dW(W.atp)} (1er) à ${dW(W.atp/2)} (dernier) selon le classement final, 0 sans aucun match. Le classement mesure le niveau, pas les progrès : garde-lui peu de poids.</li>
       <li>Tu peux remplacer l’AFL1 calculée par ta propre note (case AFL1).</li></ul>
@@ -127,7 +129,7 @@ function vNoteG(){
     return `<tr><td><button class="lien" type="button" data-act="fiche" data-k="${esc(k)}">${esc(N.nom)}</button></td>
     <td><select class="nsel" data-note="rep" data-k="${esc(k)}">${Object.keys(REPS).map(r=>`<option${(e.rep||'4/4')===r?' selected':''}>${r}</option>`).join('')}</select></td>
     <td title="${A.nbSRP} match(s) complet(s) retenu(s)">${fr(A.srp)}</td>
-    <td title="${A.nS} SCE reçue(s)${A.bon!=null?' · '+A.bon+' bonus':''}${A.prog!=null?' · progression '+fr(A.prog):''}">${fr(A.poly)}${A.nS===1?' <small class="muted">(1 SCE)</small>':''}</td>
+    <td title="${A.nS} SCE reçue(s)${A.bon!=null?' · '+A.bon+' bonus ('+A.part+' % des points gagnés)':''}${A.prog!=null?' · progression '+fr(A.prog):''}">${fr(A.poly)}${A.nS===1?' <small class="muted">(1 SCE)</small>':''}</td>
     <td title="${A.rang?'rang '+A.rang:''}">${fr(A.atp)}</td>
     <td style="white-space:nowrap">${e.a1!=null&&e.a1!==''?`<s class="muted small" title="note calculée">${fr(A.tot)}</s> `:`<b>${fr(A.tot)}</b> `}<input class="pct g6a1" type="number" min="0" max="12" step="0.25" data-note="a1" data-k="${esc(k)}" value="${e.a1==null?'':e.a1}" placeholder="modifier" title="Ta note d’AFL1, si tu ne retiens pas la note calculée" aria-label="AFL1 retenue pour ${esc(N.nom)}"></td>
     <td>${selDegres('afl2',k,N.rep[0],e.afl2)}${sug(degreEtoile(k,'AFL2'))}</td>

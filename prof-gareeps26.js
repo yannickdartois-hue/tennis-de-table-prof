@@ -13,14 +13,16 @@
 const KS=['R','A','K','T'];
 const estG26=c=>{const L=DB.classesL[c];return !!(L&&L.pa==='g26')};
 const classeL=()=>Object.keys(DB.classesL).find(x=>norm(x)===norm(DB.classe));
-const palDe=c=>{const L=DB.classesL[c];return L&&Array.isArray(L.pal)&&L.pal.length===3?L.pal:G26.paliers};
+// Paliers du polygone en % des points gagnés (L.pp). L.pal (ancien réglage en nombre de bonus) part encore pour les téléphones pas à jour.
+const palDe=c=>{const L=DB.classesL[c];return L&&Array.isArray(L.pp)&&L.pp.length===3?L.pp:G26.palP};
+const palAncien=c=>{const L=DB.classesL[c];return L&&Array.isArray(L.pal)&&L.pal.length===3?L.pal:G26.paliers};
 function scoreM(b){let a=0,c=0;for(let i=0;i<b.length;i+=2){if(b[i]==='a')a++;else if(b[i]==='b')c++}return {a,b:c}}
 // Totaux d'un joueur (index p) dans une table : bonus R/A/K/T + victoires
-function totaux(t,p){const v={R:0,A:0,K:0,T:0};let vic=0;
+function totaux(t,p){const v={R:0,A:0,K:0,T:0};let vic=0,pts=0;
   t.m.forEach((m,mi)=>{const [ia,ib]=G26.rot[mi],c=ia===p?'a':ib===p?'b':null;if(!c)return;
-    for(let i=0;i<m.b.length;i+=2)if(m.b[i]===c&&m.b[i+1]!=='-')v[m.b[i+1]]=(v[m.b[i+1]]||0)+1;
+    for(let i=0;i<m.b.length;i+=2)if(m.b[i]===c){pts++;if(m.b[i+1]!=='-')v[m.b[i+1]]=(v[m.b[i+1]]||0)+1}
     const s=scoreM(m.b),w=s.a>s.b?'a':s.b>s.a?'b':m.dec;if(m.b.length>=24&&w===c)vic++});
-  return {v:KS.map(k=>v[k]||0),vic};
+  const n=KS.map(k=>v[k]||0);return {v:n,vic,pts,pc:G26.pct(n,pts)};
 }
 function scoreSRP(x){const d=G26.srp.find(s=>s.k===x.k);const b=x.b||'',w=(b.match(/[xp]/g)||[]).length,bo=(b.match(/x/g)||[]).length,sc=w+bo*d.x;return {sc,deg:G26.degre(sc),fini:b.length>=G26.balles}}
 
@@ -50,7 +52,7 @@ function tablesClasse(c){return Object.values(DB.sce||{}).filter(t=>norm(t.class
 function histoire(c){
   const H={};
   tablesClasse(c).sort((a,b)=>a.sce-b.sce||a.seance-b.seance).forEach(t=>t.joueurs.forEach((j,p)=>{
-    const h=H[j]||(H[j]={s:{}});h.s[t.sce]=totaux(t,p).v;const ch=t.bil&&t.bil[p];if(ch&&ch.length)h.ch=ch}));
+    const h=H[j]||(H[j]={s:{},p:{}});const x=totaux(t,p);h.s[t.sce]=x.v;h.p[t.sce]=x.pts;const ch=t.bil&&t.bil[p];if(ch&&ch.length)h.ch=ch}));
   return H;
 }
 
@@ -59,12 +61,12 @@ function reglage(c){
   const L=DB.classesL[c],g=L.pa==='g26',p=palDe(c);
   return `<div class="g6reg"><label class="ch" for="pa-${esc(c)}">Parcours de la classe</label>
   <select id="pa-${esc(c)}" data-pa="${esc(c)}"><option value=""${g?'':' selected'}>Étoile 7 axes (actuel)</option><option value="g26"${g?' selected':''}>GAREEPS 2026 (SCE / SRP / STOM)</option></select>
-  ${g?`<p class="small" style="margin:6px 0 0">Paliers du polygone (bonus sur les 2 matchs de SCE) : anneau 2 à partir de <input type="number" min="1" max="20" value="${p[0]}" data-pal="${esc(c)}" data-i="0" class="g6pal">, anneau 3 à partir de <input type="number" min="1" max="30" value="${p[1]}" data-pal="${esc(c)}" data-i="1" class="g6pal">, anneau 4 à partir de <input type="number" min="1" max="40" value="${p[2]}" data-pal="${esc(c)}" data-i="2" class="g6pal"></p>
+  ${g?`<p class="small" style="margin:6px 0 0">Paliers du polygone (<b>% des points gagnés</b> avec ce bonus, sur les 2 matchs de SCE) : anneau 2 à partir de <input type="number" min="1" max="98" value="${p[0]}" data-pal="${esc(c)}" data-i="0" class="g6pal">, anneau 3 à partir de <input type="number" min="2" max="99" value="${p[1]}" data-pal="${esc(c)}" data-i="1" class="g6pal">, anneau 4 à partir de <input type="number" min="3" max="100" value="${p[2]}" data-pal="${esc(c)}" data-i="2" class="g6pal"> %</p>
   <p class="small muted" style="margin:4px 0 0">Au début des SCE n°2 et n°3, refais scanner le <b>QR de démarrage</b> : il apporte aux téléphones les polygones et les choix déjà reçus (${Object.keys(histoire(c)).length} élève(s) à ce jour).</p>`:''}</div>`;
 }
 
 /* ---------- Onglet GAREEPS : suivi ---------- */
-function cellule(v,pal){const lv=G26.niveau(v,pal),col=['#f1f3f6','#fde2e2','#fff3c4','#d9f0dc','#9fd3a8'][lv];return `<td style="background:${col};text-align:center">${v}</td>`}
+function cellule(pc,n,pal){const lv=G26.niveau(pc,pal),col=['#f1f3f6','#fde2e2','#fff3c4','#d9f0dc','#9fd3a8'][lv];return `<td style="background:${col};text-align:center" title="${n} bonus">${pc}<small>%</small></td>`}
 function vG26(){
   const c=classeL();if(!c||!estG26(c))return `<h2>GAREEPS 2026</h2><p class="muted">Choisis une classe réglée sur le parcours GAREEPS 2026 (onglet Classes).</p>`;
   const pal=palDe(c),T=tablesClasse(c),H=histoire(c),noms=liste();
@@ -77,12 +79,12 @@ function vG26(){
   const ligne=j=>{const h=H[j]||Object.entries(H).find(([x])=>norm(x)===norm(j))?.[1]||{s:{}},k=cleEleve(c,j),o=R[k]||{srp:{},stom:{}};
     const nst=Object.values(o.stom),n1=nst.filter(x=>x>=1).length,n2=nst.filter(x=>x>=2).length;
     return `<tr><td><button type="button" class="lien" data-act="fiche" data-k="${esc(k)}">${esc(j)}</button></td>
-    ${[1,2,3].map(n=>h.s[n]?h.s[n].map(v=>cellule(v,pal)).join(''):'<td colspan="4" class="muted" style="text-align:center">—</td>').join('')}
+    ${[1,2,3].map(n=>h.s[n]?(pts=>G26.pct(h.s[n],pts).map((pc,i)=>cellule(pc,h.s[n][i],pal)).join(''))(h.p&&h.p[n]!=null?h.p[n]:h.s[n].reduce((a,x)=>a+x,0)):'<td colspan="4" class="muted" style="text-align:center">—</td>').join('')}
     <td>${(h.ch||[]).map(x=>G26.brK[x].ic).join(' ')||'—'}</td>
     ${KS.map(x=>{const z=o.srp[x];return `<td style="text-align:center">${z?'D'+z.best+' <small class="muted">('+z.n+')</small>':'—'}</td>`}).join('')}
     <td style="text-align:center">${n1?n1+' <small class="muted">dont '+n2+' niv. 2</small>':'—'}</td></tr>`};
   return `<h2>GAREEPS 2026 · ${esc(c)}</h2>
-  <section class="carte"><p class="small" style="margin-top:0">Polygone : bonus ⚡ rapide, 📐 architecte, 💥 KO, 🎯 tactique sur les 2 matchs de chaque SCE. Couleur = anneau atteint (paliers ${pal.join(' / ')}). SRP : meilleur degré (nombre de matchs complets). STOM : ateliers validés sur 12.</p>
+  <section class="carte"><p class="small" style="margin-top:0">Polygone : part des points gagnés avec chaque bonus (⚡ rapide, 📐 architecte, 💥 KO, 🎯 tactique) sur les 2 matchs de chaque SCE, en %. Le nombre de bonus s’affiche au survol. Couleur = anneau atteint (paliers ${pal.join(' / ')} %). SRP : meilleur degré (nombre de matchs complets). STOM : ateliers validés sur 12.</p>
   ${sansTable.filter(([n,L])=>L.length).map(([n,L])=>`<p class="avert small">SCE n°${n} : pas de table reçue pour ${L.map(esc).join(', ')}.</p>`).join('')}
   <div class="tablewrap"><table class="cl"><thead><tr><th rowspan="2">Élève</th>${[1,2,3].map(n=>`<th colspan="4">SCE ${n}</th>`).join('')}<th rowspan="2">Choix</th><th colspan="4">SRP</th><th rowspan="2">STOM</th></tr>
   <tr>${[1,2,3].map(()=>G26.br.map(b=>`<th title="${esc(b.n)}">${b.ic}</th>`).join('')).join('')}${G26.br.map(b=>`<th>${b.ic} ${G26.brK[b.k].srp}</th>`).join('')}</tr></thead>
@@ -101,10 +103,10 @@ function ficheG26(k){
 document.addEventListener('change',e=>{
   const t=e.target;
   if(t.dataset&&t.dataset.pa!=null){const L=DB.classesL[t.dataset.pa];if(!L)return;if(t.value)L.pa=t.value;else delete L.pa;sauver();rendre();return}
-  if(t.dataset&&t.dataset.pal!=null){const L=DB.classesL[t.dataset.pal];const p=(L.pal||G26.paliers).slice();p[+t.dataset.i]=Math.max(1,+t.value||1);
-    if(!(p[0]<p[1]&&p[1]<p[2])){alert('Les paliers doivent augmenter : ex. 2, 4, 6.');rendre();return}L.pal=p;sauver();return}
+  if(t.dataset&&t.dataset.pal!=null){const L=DB.classesL[t.dataset.pal];const p=palDe(t.dataset.pal).slice();p[+t.dataset.i]=Math.max(1,Math.min(100,+t.value||1));
+    if(!(p[0]<p[1]&&p[1]<p[2])){alert('Les paliers doivent augmenter : ex. 10, 20, 30 %.');rendre();return}L.pp=p;sauver();return}
 });
 const css=document.createElement('style');css.textContent='.g6reg{margin-top:10px;padding-top:10px;border-top:1px dashed var(--trait)}.g6pal{width:58px;min-height:36px;text-align:center}';document.head.appendChild(css);
 
-window.G6P={estG26,palDe,histoire,reglage,vG26,ficheG26,depuisFichier,depuisQR,g6DepuisQR};
+window.G6P={estG26,palDe,palAncien,histoire,reglage,vG26,ficheG26,depuisFichier,depuisQR,g6DepuisQR};
 })();

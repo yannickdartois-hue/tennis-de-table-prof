@@ -30,7 +30,10 @@ const G26={
      ip:['Jouer là où ça gêne l’adversaire.','Ne plus perdre contre le même style de joueur.']}
   ],
   // Paliers du polygone (total sur les 2 matchs de la SCE) : 0-1 / 2-3 / 4-5 / 6 et +. Réglables par le prof (QR de classe).
-  paliers:[2,4,6],
+  paliers:[2,4,6],  // ancien réglage (nombre de bonus), gardé pour les téléphones pas encore à jour
+  // Polygone en PROPORTION (décision du 13/11/2026) : part des points gagnés obtenus avec chaque bonus, en %.
+  // Ainsi un élève qui gagne peu de points n'a pas des branches courtes par principe.
+  palP:[10,20,30],
   // Score parlant d'un match de SRP : degré 1 < 20 ≤ degré 2 < 60 ≤ degré 3 < 80 ≤ degré 4
   degres:[20,60,80],
   // Étiquettes de la fiche « avant le match »
@@ -162,5 +165,7 @@ G26.brK=Object.fromEntries(G26.br.map(b=>[b.k,b]));
 // Score parlant d'un match de SRP et son degré
 G26.degre=s=>s>=G26.degres[2]?4:s>=G26.degres[1]?3:s>=G26.degres[0]?2:1;
 // Niveau du polygone (0 à 4) pour un nombre de bonus
+// % de chaque bonus parmi les points gagnés (v = [R,A,K,T] en nombre, pts = points gagnés)
+G26.pct=(v,pts)=>v.map(x=>pts>0?Math.round(100*x/pts):0);
 G26.niveau=(n,pal)=>{const p=pal||G26.paliers;return n>=p[2]?4:n>=p[1]?3:n>=p[0]?2:n>0?1:0};
 if(typeof module!=='undefined')module.exports=G26;

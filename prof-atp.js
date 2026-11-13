@@ -62,7 +62,7 @@ function absents(c,s){
 function classement(c,s){
   const L=(DB.classesL[c]||{}).eleves||[],tous=Object.values(M()).filter(m=>norm(m.classe)===norm(c));
   const seances=[...new Set(tous.map(m=>m.seance).concat(Object.keys(R()).filter(k=>k.startsWith(norm(c)+'|')).map(k=>+k.split('|')[1])))].filter(x=>x<=s).sort((a,b)=>a-b);
-  const P={};L.forEach(n=>P[n]=0);let depart=null,jour={},rangG=null;
+  const P={};L.forEach(n=>P[n]=0);let depart=null,jour={},rangG=null;const hors=[];
   // Tablette « borne » alimentée par le QR de démarrage : points de départ reçus, pas d'historique des séances
   const base=(DB.atpBase||{})[norm(c)];let SE=seances;
   if(base&&s>=base.s){Object.entries(base.p||{}).forEach(([n,v])=>{const x=L.find(y=>norm(y)===norm(n))||n;P[x]=+v});SE=seances.filter(x=>x>=base.s)}
@@ -70,7 +70,10 @@ function classement(c,s){
     if(x===s)depart=Object.assign({},P);
     const MX=tous.filter(m=>m.seance===x),rk=G26.rangsG(L,P,absents(c,x),MX.flatMap(m=>[m.a,m.b])),J={};
     if(x===s)rangG=rk;
+    const paire={};
     MX.sort((a,b)=>a.ts-b.ts).forEach(m=>{const w=m.sa>m.sb?m.a:m.b,l=w===m.a?m.b:m.a;
+      // règlement : 2 matchs au plus contre le même adversaire dans la séance ; au-delà, le match ne compte pas
+      const kp=[norm(m.a),norm(m.b)].sort().join('|');paire[kp]=(paire[kp]||0)+1;if(paire[kp]>A.maxMemeAdv){if(x===s)hors.push(m.id);return}
       [w,l].forEach(n=>{J[n]=J[n]||{pts:0,v:0,d:0,ref:0};if(P[n]==null)P[n]=0});
       const gn=G26.atpGain(rk[w]||L.length,rk[l]||L.length);J[w].pts+=gn;J[w].v++;J[l].pts+=A.perdu;J[l].d++});
     Object.entries(R()).forEach(([k,nb])=>{const [cc,ss,nn]=k.split('|');if(cc===norm(c)&&+ss===x){const n=L.find(y=>norm(y)===nn)||nn;J[n]=J[n]||{pts:0,v:0,d:0,ref:0};J[n].ref+=nb;J[n].pts+=A.refus*nb}});
@@ -81,7 +84,7 @@ function classement(c,s){
   if(!rangG)rangG=G26.rangsG(L,depart,absents(c,s),[]);
   const total={};Object.keys(Object.assign({},depart,P)).forEach(n=>total[n]=(depart[n]||0)+((jour[n]||{}).pts||0));
   const noms=L.length?L:Object.keys(total);
-  return {depart,jour,total,rangD:G26.rangs(noms,depart),rangT:G26.rangs(noms,total),rangG,abs:absents(c,s),noms};
+  return {depart,jour,total,rangD:G26.rangs(noms,depart),rangT:G26.rangs(noms,total),rangG,abs:absents(c,s),hors,noms};
 }
 // Points de départ de la PROCHAINE séance (pour le QR de démarrage)
 function pourQR(c){
@@ -109,6 +112,7 @@ function vATP(){
   <p class="small muted">Mode borne : le tableau en grand et la caméra allumée en bas à gauche. Après chaque match, l’arbitre y montre le QR affiché par son téléphone ; le classement et les effets se mettent à jour, même sans internet. Branche la tablette sur secteur. <b>Borne sur une autre tablette que la tienne</b> : ouvre l’outil prof dessus, lance le mode borne et montre-lui le <b>QR de démarrage</b> de la classe (onglet Classes) : elle reçoit la liste, le classement de départ, les paliers et les avatars.</p>
   <p class="small muted">${nb} match${nb>1?'s':''} reçu${nb>1?'s':''} pour la séance ${s}${DB.atpLu&&g?' · Grist lu à '+new Date(DB.atpLu).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):''}. Barème d’Arnaud : de ${A.dessous[4]} à ${A.dessus[4]} points selon l’écart de rang au début de la séance, ${A.perdu} pour une défaite, ${A.refus} pour un refus.</p>
   <p class="small${K.abs.length?'':' muted'}">${K.abs.length?`<b>Absents ou dispensés (onglet Appel, séance ${s}) :</b> ${K.abs.map(n=>esc(prenom(n))).join(', ')}. Ils ne comptent pas dans l’écart de rang.`:`Règle des absents : les élèves notés absents ou dispensés dans l’onglet <b>Appel</b> (séance ${s}) ne comptent pas dans l’écart de rang. Fais l’appel <b>avant</b> de montrer le QR de démarrage pour que les téléphones le sachent.`} À points égaux, rang égal.</p>
+  ${K.hors.length?`<p class="avert small">⚠ ${K.hors.length} match${K.hors.length>1?'s':''} hors règlement (3e match ou plus contre le même adversaire) : ${K.hors.map(id=>{const m=M()[id];return m?esc(prenom(m.a))+' – '+esc(prenom(m.b)):''}).join(', ')}. Non compté${K.hors.length>1?'s':''}.</p>`:''}
   <section class="carte">${tableau(c,s,K,false)}</section>
   <p class="small">Paliers (points cumulés) : 🥈 Argent dès <input type="number" class="g6pal" data-atppal="0" value="${seuils()[0]}" min="1">, 🥇 Or dès <input type="number" class="g6pal" data-atppal="1" value="${seuils()[1]}" min="1">, 💎 Diamant dès <input type="number" class="g6pal" data-atppal="2" value="${seuils()[2]}" min="1"> <span class="muted">(à ajuster après la 1re séance)</span></p>
   <p class="small muted">Le classement de départ de la séance suivante part dans le QR de démarrage (onglet Classes) : fais-le rescanner en début de cours pour que les téléphones l’affichent.</p>`;
@@ -158,6 +162,7 @@ async function jouer(){
     const w=m.sa>m.sb?m.a:m.b,l=w===m.a?m.b:m.a,rW=K.rangG[w]||nb,rL=K.rangG[l]||nb,gain=G26.atpGain(rW,rL);
     const boss=(rL===1&&(K.depart[l]||0)>0)||rW-rL>=3,serre=Math.abs(m.sa-m.sb)<=2;const FX=h=>{const f=document.getElementById('ar-fx');if(f)f.innerHTML=h};if(!document.getElementById('ar-fx'))break;
     const W=esc(G26.court(w).toUpperCase()),L=esc(G26.court(l).toUpperCase()),sc=`${Math.max(m.sa,m.sb)}-${Math.min(m.sa,m.sb)}`;
+    if(K.hors.includes(m.id)){bip(false);FX(`<div class="ar-ov"><div><div class="bt" style="color:#ff2fd0">HORS RÈGLEMENT</div><div class="qui">${W} – ${L} <span>${sc}</span></div><p style="font:700 clamp(16px,2.6vh,30px) 'Courier New',monospace;color:#fff">3e MATCH CONTRE LE MÊME ADVERSAIRE AUJOURD’HUI : 0 POINT</p></div></div>`);await attendre(3500);FX('');await attendre(300);continue}
     const cont=`<div class="ar-cont"><div class="ar-cav">${avDe(c,l,72)}</div><div class="t">CONTINUE ? ▶ YES</div><p>${esc(G26.court(l))} a tout donné${serre?` : ${sc}, à ${Math.abs(m.sa-m.sb)} point${Math.abs(m.sa-m.sb)>1?'s':''} !`:'.'}</p><div class="g">+${fr(A.perdu)} XP · BONUS COURAGE 💪</div></div>`;
     if(boss){
       const etoiles=['7%;top:16%','88%;top:20%','12%;top:72%','84%;top:74%','48%;top:6%','30%;top:84%'].map((p,i)=>`<span class="star" style="left:${p};animation-delay:${i*.15}s">${['⭐','🌟','✨'][i%3]}</span>`).join('');
