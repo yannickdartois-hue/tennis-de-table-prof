@@ -22,13 +22,14 @@ function tables(c){return Object.values(DB.sce||{}).filter(t=>norm(t.classe)===n
 function srpEleve(k){const L=[];recsClasse().forEach(r=>{if(r.k===k&&r.g26)(r.g26.srp||[]).forEach(x=>L.push(x))});return L}
 function scoreSRP(x){const d=G26.srp.find(s=>s.k===x.k),b=x.b||'',w=(b.match(/[xp]/g)||[]).length,bo=(b.match(/x/g)||[]).length,sc=w+bo*d.x;return {sc,deg:G26.degre(sc),fini:b.length>=G26.balles}}
 function reperes(c,k,nom){
-  let pj=0,obs=0,arb=0;
-  tables(c).forEach(t=>{const p=t.joueurs.findIndex(j=>memeNom(j,nom));if(p<0)return;
+  let pj=0,obs=0,arb=0,mq=0,disp=0;
+  tables(c).forEach(t=>{if(memeNom(t.dsp,nom))mq++;const p=t.joueurs.findIndex(j=>memeNom(j,nom));if(p<0)return;
     t.m.forEach((m,mi)=>{const [ia,ib]=G26.rot[mi],cote=ia===p?'a':ib===p?'b':null;if(cote&&m.av&&m.av[cote]&&m.av[cote].pj)pj++})});
   srpEleve(k).forEach(x=>{if(x.tm)pj++});
   recsClasse().forEach(r=>{if(r.g26)(r.g26.srp||[]).forEach(x=>{if(memeNom(x.obs,nom)&&scoreSRP(x).fini)obs++})});
   Object.values(DB.atp||{}).forEach(m=>{if(norm(m.classe)===norm(c)&&memeNom(m.arb,nom))arb++});
-  return {pj,obs,arb};
+  Object.values(DB.rec).forEach(r=>{if(r.k===k&&r.disp)disp++});
+  return {pj,obs,arb,mq,disp};
 }
 // AFL1 : trois parts calculées
 // Poids de l'AFL1 (réglables par classe) : SRP, polygone niveau, polygone progression, ATP. Total attendu : 12.
@@ -76,12 +77,12 @@ function vEtoile(){
   const c=classeL(),noms=liste();if(!noms.length)return '';
   const R=G26.role;
   return `<section class="carte"><h3>Étoile AFL2 / AFL3</h3>
-  <p class="small muted" style="margin-top:0">Descripteurs du radar d’Arnaud, degrés 1 à 4. Passe la souris ou le doigt sur un degré pour lire le descripteur. Les repères (projets écrits, SRP observées, matchs ATP arbitrés) viennent des données reçues : ils disent combien, pas comment.</p>
+  <p class="small muted" style="margin-top:0">Descripteurs du radar d’Arnaud, degrés 1 à 4. Passe la souris ou le doigt sur un degré pour lire le descripteur. Les repères (projets écrits, SRP observées, matchs ATP arbitrés, SCE marquées par un dispensé, séances dispensées) viennent des données reçues : ils disent combien, pas comment.</p>
   <div class="tablewrap"><table class="cl g6et"><thead><tr><th>Élève</th>${R.map(r=>`<th title="${esc(r.afl)}"><span class="${r.afl==='AFL2'?'a2':'a3'}">${esc(r.n)}</span></th>`).join('')}<th>Repères</th><th><span class="vh">Étoile</span></th></tr></thead><tbody>
   ${noms.map(j=>{const k=cleEleve(c,j),E=ROLE()[k]||{},P=reperes(c,k,j);
     return `<tr><td><button type="button" class="lien" data-act="fiche" data-k="${esc(k)}">${esc(j)}</button></td>
     ${R.map(r=>`<td><select class="nsel" data-g6r="${r.k}" data-k="${esc(k)}" aria-label="${esc(r.n)} de ${esc(j)}" title="${esc(E[r.k]?r.d[E[r.k]-1]:r.d.map((d,i)=>(i+1)+' : '+d).join(' · '))}"><option value="">—</option>${r.d.map((d,i)=>`<option value="${i+1}"${E[r.k]===i+1?' selected':''} title="${esc(d)}">${i+1}</option>`).join('')}</select></td>`).join('')}
-    <td class="small">${P.pj} projet${P.pj>1?'s':''} · ${P.obs} SRP obs. · ${P.arb} arb.</td><td>${R.some(r=>E[r.k])?etoileSVG(E):''}</td></tr>`}).join('')}
+    <td class="small">${P.pj} projet${P.pj>1?'s':''} · ${P.obs} SRP obs. · ${P.arb} arb.${P.mq?' · '+P.mq+' SCE marquée'+(P.mq>1?'s':''):''}${P.disp?' · <b>🩹 dispensé '+P.disp+' séance'+(P.disp>1?'s':'')+'</b>':''}</td><td>${R.some(r=>E[r.k])?etoileSVG(E):''}</td></tr>`}).join('')}
   </tbody></table></div>
   <details class="small"><summary>Les descripteurs</summary><ul>${R.map(r=>`<li><b>${esc(r.n)}</b> (${r.afl}) : ${r.d.map((d,i)=>(i+1)+'. '+esc(d)).join(' · ')}</li>`).join('')}</ul></details></section>`;
 }

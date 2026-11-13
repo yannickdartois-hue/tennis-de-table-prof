@@ -31,16 +31,16 @@ function ajouterTable(t){
   const id=norm(t.classe)+'|'+t.sce+'|'+t.joueurs.map(norm).sort().join(','),old=DB.sce[id];
   const nb=x=>x.m.reduce((s,m)=>s+m.b.length,0);
   if(old&&(nb(old)>nb(t)||(nb(old)===nb(t)&&(old.ts||0)>=(t.ts||0)))){if(t.bil&&Object.keys(t.bil).length&&!Object.keys(old.bil||{}).length){old.bil=t.bil}return 'déjà à jour'}
-  DB.sce[id]=t;t.joueurs.forEach(j=>retenirNom(cleEleve(t.classe,j),j));
+  DB.sce[id]=t;t.joueurs.forEach(j=>retenirNom(cleEleve(t.classe,j),j));if(!t.dsp)delete t.dsp;
   return old?'mise à jour':'nouvelle';
 }
 function depuisFichier(o){
   return ajouterTable({classe:o.classe||'',seance:+o.seance,sce:+o.sce||1,table:String(o.table||''),joueurs:o.joueurs,ts:Date.parse(o.exportedAt)/1000||0,
-    m:(o.matchs||[]).map(m=>({srv:m.srv||'',b:m.b||'',dec:m.dec||null,av:m.av||null})),obs:o.obs||{},bil:o.bilans||{}});
+    m:(o.matchs||[]).map(m=>({srv:m.srv||'',b:m.b||'',dec:m.dec||null,av:m.av||null})),obs:o.obs||{},bil:o.bilans||{},dsp:o.marqueur||''});
 }
 function depuisQR(q){
   return ajouterTable({classe:q.c||'',seance:+q.s,sce:+q.n||1,table:String(q.tb||''),joueurs:q.j,ts:q.ts||0,
-    m:(q.m||[]).map(([srv,b,dec,av])=>({srv,b:b||'',dec:dec||null,av:av?{a:av[0]?{pj:av[0][0],f:av[0][1],fo:av[0][2]}:null,b:av[1]?{pj:av[1][0],f:av[1][1],fo:av[1][2]}:null}:null})),obs:{},bil:q.bl||{}});
+    m:(q.m||[]).map(([srv,b,dec,av])=>({srv,b:b||'',dec:dec||null,av:av?{a:av[0]?{pj:av[0][0],f:av[0][1],fo:av[0][2]}:null,b:av[1]?{pj:av[1][0],f:av[1][1],fo:av[1][2]}:null}:null})),obs:{},bil:q.bl||{},dsp:q.dsp||''});
 }
 function g6DepuisQR(g){if(!g)return null;const [srp,stom]=g;
   return {srp:(srp||[]).map(([k,adv,obs,srv,b,tm])=>({k,adv,obs,srv,b,tm})),stom:(stom||[]).map(([k,at,nv,e,ok])=>({k,at,nv,e,ok}))}}
@@ -87,7 +87,7 @@ function vG26(){
   <div class="tablewrap"><table class="cl"><thead><tr><th rowspan="2">Élève</th>${[1,2,3].map(n=>`<th colspan="4">SCE ${n}</th>`).join('')}<th rowspan="2">Choix</th><th colspan="4">SRP</th><th rowspan="2">STOM</th></tr>
   <tr>${[1,2,3].map(()=>G26.br.map(b=>`<th title="${esc(b.n)}">${b.ic}</th>`).join('')).join('')}${G26.br.map(b=>`<th>${b.ic} ${G26.brK[b.k].srp}</th>`).join('')}</tr></thead>
   <tbody>${noms.map(ligne).join('')}</tbody></table></div></section>
-  <section class="carte"><h3>Tables de SCE reçues (${T.length})</h3>${T.length?`<ul class="small">${T.sort((a,b)=>a.sce-b.sce||(+a.table)-(+b.table)).map(t=>`<li>SCE ${t.sce} · séance ${t.seance} · table ${esc(t.table)} : ${t.joueurs.map(j=>esc(j.split(/\s+/)[0])).join(', ')} · ${t.m.filter(m=>m.b.length>=24).length}/4 matchs</li>`).join('')}</ul>`:'<p class="muted small">Aucune pour l’instant : les téléphones des tables envoient leur résultat en fin de cours (Nuage ou QR).</p>'}</section>`;
+  <section class="carte"><h3>Tables de SCE reçues (${T.length})</h3>${T.length?`<ul class="small">${T.sort((a,b)=>a.sce-b.sce||(+a.table)-(+b.table)).map(t=>`<li>SCE ${t.sce} · séance ${t.seance} · table ${esc(t.table)} : ${t.joueurs.map(j=>esc(j.split(/\s+/)[0])).join(', ')} · ${t.m.filter(m=>m.b.length>=24).length}/4 matchs${t.dsp?' · 🩹 marqueur '+esc(t.dsp.split(/\s+/)[0]):''}</li>`).join('')}</ul>`:'<p class="muted small">Aucune pour l’instant : les téléphones des tables envoient leur résultat en fin de cours (Nuage ou QR).</p>'}</section>`;
 }
 // Fiche élève : SRP / STOM détaillés
 function ficheG26(k){
