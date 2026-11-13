@@ -89,12 +89,67 @@ function vG26(){
   <div class="tablewrap"><table class="cl"><thead><tr><th rowspan="2">Élève</th>${[1,2,3].map(n=>`<th colspan="4">SCE ${n}</th>`).join('')}<th rowspan="2">Choix</th><th colspan="4">SRP</th><th rowspan="2">STOM</th></tr>
   <tr>${[1,2,3].map(()=>G26.br.map(b=>`<th title="${esc(b.n)}">${b.ic}</th>`).join('')).join('')}${G26.br.map(b=>`<th>${b.ic} ${G26.brK[b.k].srp}</th>`).join('')}</tr></thead>
   <tbody>${noms.map(ligne).join('')}</tbody></table></div></section>
+  ${vStomClasse(c)}
   <section class="carte"><h3>Tables de SCE reçues (${T.length})</h3>${T.length?`<ul class="small">${T.sort((a,b)=>a.sce-b.sce||(+a.table)-(+b.table)).map(t=>`<li>SCE ${t.sce} · séance ${t.seance} · table ${esc(t.table)} : ${t.joueurs.map(j=>esc(j.split(/\s+/)[0])).join(', ')} · ${t.m.filter(m=>m.b.length>=24).length}/4 matchs${t.dsp?' · 🩹 marqueur '+esc(t.dsp.split(/\s+/)[0]):''}</li>`).join('')}</ul>`:'<p class="muted small">Aucune pour l’instant : les téléphones des tables envoient leur résultat en fin de cours (Nuage ou QR).</p>'}</section>`;
 }
-// Fiche élève : SRP / STOM détaillés
+/* ---------- Polygone dessiné (même lecture que sur le téléphone de l'élève) ---------- */
+const COLS=['#64748B','#EA580C','#7C3AED'];
+function polySVG(series,pal){
+  const cx=150,cy=140,R=100,ang=[-90,0,90,180].map(a=>a*Math.PI/180),pt=(i,r)=>[cx+Math.cos(ang[i])*r,cy+Math.sin(ang[i])*r];
+  let g='';for(let l=1;l<=4;l++)g+=`<polygon points="${[0,1,2,3].map(i=>pt(i,R*l/4).join(',')).join(' ')}" fill="none" stroke="#d5dae1" stroke-width="${l===4?1.4:.8}"/>`;
+  [0,1,2,3].forEach(i=>{const [x,y]=pt(i,R);g+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#d5dae1"/>`});
+  series.forEach(s=>{const P=s.v.map((v,i)=>{const lv=G26.niveau(v,pal);return pt(i,lv?lv*R/4:R*.06)});
+    g+=`<polygon points="${P.map(p=>p.join(',')).join(' ')}" fill="${s.c}" fill-opacity=".14" stroke="${s.c}" stroke-width="2.5"/>`+P.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${s.c}"/>`).join('')});
+  const lab=[[cx,cy-R-12,'middle'],[cx+R+8,cy+4,'start'],[cx,cy+R+20,'middle'],[cx-R-8,cy+4,'end']];
+  g+=G26.br.map((b,i)=>`<text x="${lab[i][0]}" y="${lab[i][1]}" text-anchor="${lab[i][2]}" font-size="13" font-weight="700" fill="${b.col}">${b.ic} ${esc(b.n)}</text>`).join('');
+  return `<svg viewBox="-60 0 420 290" style="width:100%;max-width:400px;display:block;margin:auto" role="img" aria-label="Polygone des bonus">${g}</svg>
+  <p class="small" style="text-align:center;margin:2px 0">${series.map(s=>`<span style="color:${s.c};font-weight:700">■ ${esc(s.l)}</span>`).join(' &nbsp; ')}</p>
+  <p class="small muted" style="text-align:center;margin:0">Part des points gagnés avec chaque bonus. Anneaux : moins de ${pal[0]} % · ${pal[0]}-${pal[1]-1} % · ${pal[1]}-${pal[2]-1} % · ${pal[2]} % et +</p>`;
+}
+/* ---------- Bilan détaillé des SCE d'un élève ---------- */
+const liste_=v=>Array.isArray(v)?v:v&&typeof v==='object'?Object.values(v).flat():[];
+function tablesEleve(c,nom){return tablesClasse(c).map(t=>({t,p:t.joueurs.findIndex(j=>norm(j)===norm(nom))})).filter(x=>x.p>=0).sort((a,b)=>a.t.sce-b.t.sce||a.t.seance-b.t.seance)}
+function bilanSCE(c,nom){
+  const T=tablesEleve(c,nom),pal=palDe(c);if(!T.length)return '';
+  const parSce={};T.forEach(x=>parSce[x.t.sce]=x); // la dernière table reçue pour chaque SCE
+  const L=Object.values(parSce);
+  const series=L.map(({t,p})=>({l:'SCE '+t.sce,v:totaux(t,p).pc,c:COLS[(t.sce-1)%3]}));
+  let h=`<section class="carte"><h3>GAREEPS 2026 : polygone</h3>${polySVG(series,pal)}</section>`;
+  L.forEach(({t,p})=>{const x=totaux(t,p);
+    const M=t.m.map((m,mi)=>{const [ia,ib]=G26.rot[mi],c2=ia===p?'a':ib===p?'b':null;if(!c2)return null;
+      const adv=t.joueurs[c2==='a'?ib:ia];
+      let a=0,b=0;for(let i=0;i<m.b.length;i+=2){if(m.b[i]===c2)a++;else b++}
+      const av=m.av&&m.av[c2]||null,gagne=a>b||(a===b&&m.dec===c2);
+      return {mi,adv,a,b,gagne,fini:m.b.length>=24,dec:a===b&&m.dec?(m.dec===c2?' (décisif gagné)':' (décisif perdu)'):'',pj:av&&av.pj||'',fo:liste_(av&&av.fo),fa:liste_(av&&av.f)}}).filter(Boolean);
+    const vu=Object.entries(t.obs||{}).filter(([k])=>+k.split('>')[1]===p).map(([k,o])=>({qui:t.joueurs[+k.split('>')[0]],L:liste_(o)}));
+    const ch=t.bil&&t.bil[p]||[];
+    h+=`<section class="carte"><h3>SCE n°${t.sce} · séance ${t.seance} · table ${esc(t.table)}${t.dsp?' <small class="muted">(marqueur : '+esc(t.dsp)+')</small>':''}</h3>
+    <div class="tablewrap"><table class="cl"><thead><tr><th>Match</th><th>Contre</th><th>Score</th><th>Avant le match</th><th>Projet de jeu</th></tr></thead><tbody>
+    ${M.map(m=>`<tr><td>${m.mi+1}</td><td>${esc(m.adv)}</td><td><b>${m.a}-${m.b}</b>${m.dec}${m.fini?(m.gagne?' ✓':''):' <small class="muted">(inachevé)</small>'}</td>
+      <td class="small">${m.fo.length?'Mes points forts : '+m.fo.map(esc).join(', '):''}${m.fa.length?'Ses points faibles : '+m.fa.map(esc).join(', '):''}${!m.fo.length&&!m.fa.length?'—':''}</td><td class="small">${m.pj?esc(m.pj):'—'}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="tablewrap"><table class="cl"><thead><tr><th></th>${G26.br.map(b=>`<th style="color:${b.col}">${b.ic} ${esc(b.n)}</th>`).join('')}<th>Points gagnés</th><th>Victoires</th></tr></thead><tbody>
+    <tr><td>Bonus</td>${x.v.map((v,i)=>`<td style="text-align:center">${v} <small class="muted">(${x.pc[i]} %)</small></td>`).join('')}<td style="text-align:center">${x.pts}</td><td style="text-align:center">${x.vic} / 2</td></tr></tbody></table></div>
+    <p class="small" style="margin:6px 0 0"><b>Vu par son observateur :</b> ${vu.filter(o=>o.L.length).map(o=>`${esc(o.qui)} a relevé ${o.L.map(esc).join(', ')}`).join(' · ')||'<span class="muted">rien de noté</span>'}</p>
+    <p class="small" style="margin:4px 0 0"><b>Priorités choisies après cette SCE :</b> ${ch.length?ch.map((k,i)=>`${i+1}. ${G26.brK[k].ic} ${esc(G26.brK[k].n)}`).join(' · '):'<span class="muted">non choisies</span>'}</p></section>`});
+  return h;
+}
+/* ---------- STOM de la classe : élève × atelier ---------- */
+function vStomClasse(c){
+  const noms=liste(),A=[];G26.stom.forEach(S=>S.at.forEach((a,i)=>A.push({k:S.k,at:i+1,jeu:a.jeu})));
+  const M={};recsClasse().forEach(r=>{if(!r.g26)return;(r.g26.stom||[]).forEach(y=>{const id=r.k+'|'+y.k+y.at,o=M[id]||(M[id]={ok:0,e:0});o.ok=Math.max(o.ok,y.ok||0);o.e+=(y.e||[]).filter(v=>v!==''&&v!=null).length})});
+  const tot=A.map(a=>noms.filter(j=>{const o=M[cleEleve(c,j)+'|'+a.k+a.at];return o&&(o.ok||o.e)}).length);
+  return `<section class="carte"><h3>STOM de la classe</h3><p class="small muted" style="margin-top:0">Case = niveau validé (1 ou 2) ; « · » = essais sans validation. La dernière ligne compte les élèves passés par chaque atelier.</p>
+  <div class="tablewrap"><table class="cl compacte"><thead><tr><th>Élève</th>${A.map(a=>`<th title="${esc(a.jeu)}" style="color:${G26.brK[a.k].col};font-size:.8em;line-height:1.1">${G26.brK[a.k].ic}${a.at}<br><span style="color:var(--texte,#333);font-weight:500">${esc(a.jeu.replace(/^(Le |La |L’|L')/,''))}</span></th>`).join('')}</tr></thead><tbody>
+  ${noms.map(j=>`<tr><td><button type="button" class="lien" data-act="fiche" data-k="${esc(cleEleve(c,j))}">${esc(j)}</button></td>${A.map(a=>{const o=M[cleEleve(c,j)+'|'+a.k+a.at];
+    return `<td style="text-align:center;${o&&o.ok?'background:'+(o.ok>=2?'#9fd3a8':'#d9f0dc'):''}">${o?(o.ok?'<b>'+o.ok+'</b>':'·'):''}</td>`}).join('')}</tr>`).join('')}
+  <tr><td><b>Élèves</b></td>${tot.map(n=>`<td style="text-align:center;${n?'':'color:#b91c1c'}"><b>${n}</b></td>`).join('')}</tr></tbody></table></div></section>`;
+}
+// Fiche élève : polygone, bilans de SCE, SRP / STOM détaillés
 function ficheG26(k){
-  const L=Object.values(DB.rec).filter(r=>r.k===k&&r.g26).sort((a,b)=>a.seance-b.seance);if(!L.length)return '';
-  return `<section class="carte"><h3>GAREEPS 2026 : SRP et STOM</h3><div class="tablewrap"><table class="cl"><thead><tr><th>Séance</th><th>SRP</th><th>Contre</th><th>Score parlant</th><th>Degré</th></tr></thead><tbody>
+  const c=classeL(),nom=nomAffiche(k),poly=c&&estG26(c)?bilanSCE(c,nom):'';
+  const L=Object.values(DB.rec).filter(r=>r.k===k&&r.g26).sort((a,b)=>a.seance-b.seance);if(!L.length)return poly;
+  return poly+`<section class="carte"><h3>GAREEPS 2026 : SRP et STOM</h3><div class="tablewrap"><table class="cl"><thead><tr><th>Séance</th><th>SRP</th><th>Contre</th><th>Score parlant</th><th>Degré</th></tr></thead><tbody>
   ${L.flatMap(r=>(r.g26.srp||[]).map(x=>{const s=scoreSRP(x);return `<tr><td>${r.seance}</td><td>${G26.brK[x.k].ic} ${esc(G26.srp[G26.brK[x.k].srp-1].t)}</td><td>${esc(x.adv||'')}</td><td>${s.sc}${s.fini?'':' (inachevé)'}</td><td>${s.deg}</td></tr>${x.tm?`<tr><td></td><td colspan="4" class="small muted">Temps mort : ${esc(x.tm)}</td></tr>`:''}`})).join('')}</tbody></table></div>
   <p class="small" style="margin-bottom:0">${L.flatMap(r=>(r.g26.stom||[]).map(y=>{const D=G26.stom.find(s=>s.k===y.k),a=D&&D.at[y.at-1];return a?`${G26.brK[y.k].ic} ${esc(a.jeu)} : ${y.ok?'niveau '+y.ok:'non validé'} (${(y.e||[]).filter(v=>v!==''&&v!=null).join(', ')})`:''})).filter(Boolean).join(' · ')||''}</p></section>`;
 }

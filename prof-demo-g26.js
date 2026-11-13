@@ -23,6 +23,11 @@ function balles(A,B){ // 12 balles, 2 chars par balle : côté + bonus
     const k=x<P[0]*.35?'R':x<P[0]*.35+P[1]*.3?'A':x<P[0]*.35+P[1]*.3+P[2]*.25?'K':x<P[0]*.35+P[1]*.3+P[2]*.25+P[3]*.2?'T':'-';s+=w+k}
   return s;
 }
+// fiches avant-match et observations de démo (tirage séparé : ne change pas le reste de la démo)
+const PJ=['Je sers coupé sur son revers puis j’attaque la balle haute.','Je joue long dans son coup droit, puis court dans son revers.','Je fixe son revers et je finis en coup droit.','Je sers rapide au corps et je crie PAN sur le retour haut.'];
+const pk=L=>L[Math.floor(r7()*L.length)];
+function avDemo(mi){const un=mi<2,f=()=>un?{fo:[...new Set([pk(G26.forts),pk(G26.forts)])],pj:pk(PJ)}:{f:{[Object.keys(G26.faibles)[0]]:[pk(Object.values(G26.faibles)[0].L)]},pj:pk(PJ)};return {a:f(),b:f()}}
+function obsDemo(){const o={};[[2,0],[3,1],[0,2],[1,3]].forEach(([x,y])=>{const F=Object.entries(G26.faibles)[Math.floor(r7()*Object.keys(G26.faibles).length)];o[x+'>'+y]={[F[0]]:[pk(F[1].L)]}});return o}
 function construire(){
   const d=vide();d.classesL[CL]={eleves:NOMS.slice(),lien:'',pa:'g26',pal:[2,4,6]};d.classe=CL;d.vue='atp';d.seance=6;d.atpPal=[17,21,25]; // seuils de démo : les 4 paliers sont représentés
   const sauv=DB;DB=d;
@@ -32,7 +37,7 @@ function construire(){
       for(let t=0;t<4;t++){const J=ord.slice(t*4,t*4+4);
         const bil={};J.forEach((j,p)=>{const v=prof[j].map((x,i)=>[x,i]).sort((a,b)=>a[0]-b[0]).map(x=>'RAKT'[x[1]]);bil[p]=v.slice(0,3)});
         G6P.depuisFichier({classe:CL,seance:s,sce:n,table:String(t+1),joueurs:J,exportedAt:new Date(Date.now()-(6-s)*7*864e5).toISOString(),
-          matchs:G26.rot.map(([a,b])=>({srv:'a',b:balles(J[a],J[b])})),obs:{},bilans:bil})}});
+          matchs:G26.rot.map(([a,b],mi)=>({srv:'a',b:balles(J[a],J[b]),av:avDemo(mi)})),obs:obsDemo(),bilans:bil})}});
     // SRP et STOM des séances 2 à 4
     NOMS.forEach((n,i)=>{for(let s=2;s<=4;s++){
       const k=pick(['R','A','K','T']),srp=[];for(let m=0;m<ent(1,2);m++){let b='';for(let x=0;x<12;x++){const w=gagne(n,pick(NOMS));b+=w?(r()<.35+niv[n]/40?'x':'p'):'o'}srp.push({k,adv:pick(NOMS.filter(x=>x!==n)),obs:pick(NOMS),srv:'a',b,tm:k==='T'?'Jouer sur son revers':''})}

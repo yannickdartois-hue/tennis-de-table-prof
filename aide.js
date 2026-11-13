@@ -25,7 +25,8 @@ window.EPS_AIDE={appli:'Tennis de table · Outil prof',bouton:false,pied:'Toutes
 {t:'Parcours GAREEPS 2026 (par classe)',html:`<ol><li><b>Classes</b> → « Parcours de la classe » : <b>Étoile 7 axes (actuel)</b> ou <b>GAREEPS 2026 (SCE / SRP / STOM)</b>. Les autres classes ne changent pas.</li>
 <li>Réglez les paliers du polygone, en <b>% des points gagnés</b> avec chaque bonus (10 / 20 / 30 % par défaut), puis faites scanner le <b>QR de démarrage</b>.</li>
 <li><b>Au début des SCE n°2 et n°3, refaites scanner le QR de démarrage</b> : il apporte aux téléphones les polygones et les choix déjà reçus.</li>
-<li>Onglet <b>GAREEPS</b> : polygones des 3 SCE, choix, meilleur degré par SRP, ateliers STOM validés, tables reçues et élèves sans table.</li></ol>
+<li>Onglet <b>GAREEPS</b> : polygones des 3 SCE (en %), choix, meilleur degré par SRP, ateliers STOM validés, puis le tableau <b>STOM de la classe</b> (élève × atelier), les tables reçues et les élèves sans table.</li>
+<li><b>Fiche d’un élève</b> (clic sur son nom) : son polygone dessiné (SCE 1, 2, 3 superposées), le bilan de chaque SCE (adversaires, scores, points forts ou faibles notés avant le match, projets de jeu, ce que son observateur a relevé, priorités choisies), puis ses SRP et STOM.</li></ol>
 <p class="astuce">La SCE se joue à 4 avec un seul téléphone ; la table envoie un fichier « …_Table4_S5_sce2.json » ou un QR « SCE ».</p>`},
 {t:'Tournoi ATP et Grist (en direct)',html:`<ul><li>Barème d’Arnaud : 5,5 à 1 point selon l’écart de rang au début de la séance, 0,5 pour une défaite, −2 pour un refus (bouton « −2 » de l’onglet <b>ATP</b>).</li>
 <li>2 matchs au plus contre le même adversaire dans la séance : à partir du 3e, le match ne compte pas (la borne affiche « HORS RÈGLEMENT », l’onglet ATP le signale).</li>
