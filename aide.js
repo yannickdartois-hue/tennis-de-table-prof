@@ -1,12 +1,12 @@
 /* aide.js — mode d'emploi de l'outil prof tennis de table (lu par eps-aide.js) */
 window.EPS_AIDE={appli:'Tennis de table · Outil prof',bouton:false,pied:'Toutes les données restent sur cet appareil : pensez à la sauvegarde après chaque import.',publics:[
 {id:'prof',titre:'Professeur',chapitres:[
-{t:'🔑 Code du cours (chaque cours)',html:`<ol>
-<li>Les élèves utilisent leur téléphone : sans verrou, ils pourraient remplir chez eux des séances à l’avance. Le code du cours l’empêche.</li>
-<li>Début de cours : Classes → <span class="bouton">🔑 Code du cours</span>, vérifiez la séance, écrivez les 4 chiffres au tableau.</li>
-<li>Chaque groupe tape le code : la séance du jour s’ouvre sur son téléphone pendant 2 heures. Sans code, l’appli se consulte mais on ne peut rien saisir.</li>
-<li>Le code ne vaut que pour cette séance et ce jour-là. Pour préparer un cours, changez la date : le code s’affiche à l’avance. Aucune connexion nécessaire.</li>
-</ol><p class="astuce">Une seule fois après cette mise à jour : refaites scanner le <b>QR de démarrage</b> (il apporte la clé de la classe). Tant qu’un téléphone ne l’a pas rescanné, il n’est pas verrouillé.</p>`},
+{t:'📷 QR du jour (chaque cours)',html:`<ol>
+<li>Les élèves utilisent leur téléphone : sans verrou, ils pourraient remplir chez eux des séances à l’avance. Le <b>QR du jour</b> l’empêche, sans aucun code à taper.</li>
+<li>Début de cours : Classes → <span class="bouton">QR de démarrage</span>. La séance proposée est la suivante de la dernière ouverte : vérifiez-la, touchez-en une autre si besoin.</li>
+<li>Chaque groupe scanne le QR : la séance s’ouvre sur son téléphone pendant 2 heures. Sans ce QR, l’appli se consulte mais on ne peut rien saisir.</li>
+<li>Le QR ne vaut que ce jour-là. Pas d’écran en cours ? <b>🗓 QR pour un autre jour · imprimer</b> : choisissez la date et la séance, imprimez-le d’avance. Aucune connexion nécessaire.</li>
+</ol>`},
 
 {t:'Démarrer (rentrée)',html:`<ol><li><b>Classes</b> : importez l’export Pronote de chaque classe (xlsx, xls, csv, ou liste collée) et collez le lien d’envoi du Nuage (« Demande de fichier »).</li><li><b>Toutes les classes d’un coup</b> : le fichier fait par la page « Mes classes » du portail mon-EPS. <b>Élève arrivé en cours d’année</b> : collez « NOM Prénom » avec le nom de la classe → « Ajouter ces élèves ». Classe déjà présente : l’appli demande toujours « Ajouter » ou « Remplacer la liste ». Ensuite, faites rescanner le QR de démarrage.</li>
 <li>Premier cours : affichez le <b>QR de démarrage</b> ; chaque groupe le scanne dans l’appli élève.</li>
