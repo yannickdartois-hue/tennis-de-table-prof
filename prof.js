@@ -21,7 +21,7 @@ function critere(n,c){const i=exInfo(n);if(!i)return '';const nv=i.e.nv||[],cols
 
 /* ---------- Base ---------- */
 let DB=charger();
-function vide(){return {rec:{},poules:{},alias:{},noms:{},vue:'import',classe:'',seance:1,eleve:null,journal:[],classesL:{},appel:{},tri:'nom'}}
+function vide(){return {rec:{},poules:{},alias:{},noms:{},vue:'classes',classe:'',seance:1,eleve:null,journal:[],classesL:{},appel:{},tri:'nom'}}
 function charger(){try{const o=JSON.parse(localStorage.getItem(CLEP));if(o&&o.rec)return Object.assign(vide(),o)}catch(e){}return vide()}
 function sauver(){try{localStorage.setItem(CLEP,JSON.stringify(DB))}catch(e){alert('Mémoire de l’appareil pleine : exporte une sauvegarde.')}}
 // Identité d'un élève : classe + nom normalisé, avec les fusions décidées par le prof.
