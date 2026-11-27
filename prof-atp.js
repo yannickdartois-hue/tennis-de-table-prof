@@ -55,7 +55,9 @@ async function envoyerRefus(c){
 const ABS=['absent','abj','disp'];
 function absents(c,s){
   const L=(DB.classesL[c]||{}).eleves||[],ap=DB.appel||{};
-  const A=L.filter(n=>{const k=cleEleve(c,n),o=ap[norm(c)+'|'+s+'|'+k];if(o)return ABS.includes(o);const r=DB.rec[k+'|'+s];return !!(r&&r.disp)}); // appel corrigé à la main, sinon « dispensé » envoyé par l'élève
+  const A=L.filter(n=>{const k=cleEleve(c,n);
+    if(typeof apStatut==='function'){const st=apStatut(c,String(s),k,null);if(st.s)return st.s==='a'||st.s==='i'}   /* appel à 4 statuts (chantier 10) : absent ou inapte */
+    const o=ap[norm(c)+'|'+s+'|'+k];if(o)return ABS.includes(o);const r=DB.rec[k+'|'+s];return !!(r&&r.disp)}); // appel corrigé à la main, sinon « dispensé » envoyé par l'élève
   const base=(DB.atpBase||{})[norm(c)];if(!A.length&&base&&base.s===s&&base.ab)return base.ab.slice();
   return A;
 }

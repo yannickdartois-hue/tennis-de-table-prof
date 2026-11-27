@@ -12,7 +12,7 @@ window.EPS_AIDE={appli:'Tennis de table · Outil prof',bouton:false,pied:'Toutes
 <li>Premier cours : affichez le <b>QR de démarrage</b> ; chaque groupe le scanne dans l’appli élève.</li>
 <li>Installez l’outil sur l’écran d’accueil de l’iPad et faites une <b>sauvegarde</b> après chaque import.</li></ol>`},
 {t:'Chaque séance',html:`<ul><li><b>Importer</b> : scannez les QR à la suite (la caméra reste ouverte), ou choisissez les fichiers .json / le .zip du Nuage. Réimporter ne crée pas de doublon.</li>
-<li><b>Appel</b> : statut automatique (présent, dispensé, rien reçu), corrigeable : en retard, oubli de tenue, absent, absent justifié, oubli d’envoi. L’encadré « Groupes » dit qui n’a rien envoyé.</li>
+<li><b>Appel</b> : 4 statuts par élève — <b>P</b> présent, <b>A</b> absent, <b>I</b> inapte, <b>IP</b> inapte partiel — et précisions (retard, oubli de tenue, absence justifiée, oubli d’envoi). Pointillés = statut proposé d’après ce qui est reçu ; le toucher le confirme, le re-toucher l’enlève. Daté au 1er appel, historique gardé. « 🙂 Bilan de fin de cours » : appréciation facultative (☹ 🙁 🙂 😃), ni note ni évaluation. L’encadré « Groupes » dit qui n’a rien envoyé.</li>
 <li><b>Pilotage</b> → « Poules du jour » : montante-descendante, un QR par poule à afficher table par table.</li>
 <li><b>Tournoi</b> : poules et classement de la classe ; deux versions d’une même poule → vous choisissez.</li></ul>`},
 {t:'Suivre et noter',html:`<ul><li><b>Élèves</b> : classement du cycle (moyenne des rangs), absences, dispenses, retards, oublis de tenue ; fiche élève avec courbe du rang et étoiles.</li>
@@ -32,7 +32,7 @@ window.EPS_AIDE={appli:'Tennis de table · Outil prof',bouton:false,pied:'Toutes
 <li>2 matchs au plus contre le même adversaire dans la séance : à partir du 3e, le match ne compte pas (la borne affiche « HORS RÈGLEMENT », l’onglet ATP le signale).</li>
 <li><b>Direct par internet</b> : un seul document Grist pour toutes les classes, partagé en « Accès public : éditeur » (aucune clé). Collez son adresse dans Classes → « Tournoi ATP en direct », puis refaites scanner le QR de démarrage. Seuls prénom et initiale vont dans Grist.</li>
 <li>Sans internet, les matchs arrivent par la borne ou avec l’envoi des séances. Un match n’est jamais compté deux fois.</li>
-<li><b>Absents</b> : les élèves notés absents ou dispensés dans l’onglet <b>Appel</b> ne comptent pas dans l’écart de rang (sauf s’ils jouent quand même). <b>Fais l’appel avant de montrer le QR de démarrage</b> : c’est lui qui donne la liste aux téléphones et à une borne sur une autre tablette. À points égaux, rang égal (1re séance : 3 points par victoire).</li>
+<li><b>Absents</b> : les élèves notés absents ou inaptes dans l’onglet <b>Appel</b> ne comptent pas dans l’écart de rang (sauf s’ils jouent quand même). <b>Fais l’appel avant de montrer le QR de démarrage</b> : c’est lui qui donne la liste aux téléphones et à une borne sur une autre tablette. À points égaux, rang égal (1re séance : 3 points par victoire).</li>
 <li><b>Refus</b> : avec Grist, le −2 part aussi vers les téléphones connectés ; sinon il apparaît au cours suivant.</li>
 <li>Paliers des avatars (onglet ATP) : 10 / 20 / 30 points par défaut, à ajuster après la 1re séance.</li></ul>`},
 {t:'Mode borne (tablette sur trépied)',html:`<ol><li>Onglet <b>ATP</b> → <span class="bouton">📷 Mode borne</span> : tableau arcade en grand, caméra en bas à gauche (🔄 pour changer de caméra). Branchez la tablette sur secteur, son activé.</li>
