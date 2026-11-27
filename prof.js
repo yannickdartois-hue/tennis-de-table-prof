@@ -34,8 +34,18 @@ function ajouterRecord(r){
   const k=cleEleve(r.classe,r.eleve);retenirNom(k,r.eleve);
   const id=k+'|'+r.seance,old=DB.rec[id];
   if(old&&(old.ts||0)>(r.ts||0)&&old.src==='fichier')return 'déjà à jour';
-  DB.rec[id]=Object.assign({k},r);return old?'mis à jour':'nouveau';
+  DB.rec[id]=Object.assign({k},r);SCX={c:r.classe,s:+r.seance};return old?'mis à jour':'nouveau';
 }
+let SCX=null;   /* classe et séance du dernier QR lu (pour « Encore N élèves à scanner ») */
+/* v. « Encore N élèves à scanner » affiché dans le scanner, sous le nom des élèves lus (règle commune des outils prof).
+   manque : noms des élèves de la classe sans séance reçue (hors absents notés à l'appel) ; lib : « classe · séance ». */
+function resteBloc(manque,total,lib,nAbs){if(!total)return '';const s=manque.length>1?'s':'',ab=nAbs?` · ${nAbs} absent${nAbs>1?'s':''} non compté${nAbs>1?'s':''}`:'';
+  return manque.length?`<div class="scan-reste" style="background:#fff7ed;border:2px solid #fb923c;border-radius:12px;padding:8px 10px;color:#14181f;text-align:left"><b style="font-size:20px">Encore ${manque.length} élève${s} à scanner</b> <span style="font-size:14px">· ${esc(lib)}${ab}</span><div style="font-size:15px;margin-top:4px;line-height:1.35">${manque.map(esc).join(', ')}</div></div>`
+    :`<div class="scan-reste ok" style="background:#dcfce7;border:2px solid #22c55e;border-radius:12px;padding:8px 10px;color:#14532d;text-align:left"><b style="font-size:20px">✓ Toute la classe est scannée</b> <span style="font-size:14px">· ${esc(lib)}${ab}</span></div>`}
+function resteScan(){const x=SCX||{c:DB.classe,s:+DB.seance};if(!x.c||!x.s)return '';
+  const c=Object.keys(DB.classesL).find(y=>norm(y)===norm(x.c))||x.c,c0=DB.classe;DB.classe=c;
+  try{const K=eleves(),abs=K.filter(k=>['absent','abj'].includes(DB.appel[norm(c)+'|'+x.s+'|'+k])),m=K.filter(k=>!abs.includes(k)&&!DB.rec[k+'|'+x.s]);
+    return resteBloc(m.map(nomAffiche),K.length,c+' · séance '+x.s,abs.length)}finally{DB.classe=c0}}
 // Deux versions d'une même poule se contredisent si les joueurs diffèrent
 // ou si un match terminé dans les deux n'a pas le même score (deux tablettes, deux saisies).
 function conflitPoule(x,y){
@@ -585,7 +595,7 @@ document.addEventListener('click',e=>{
     case 'secours':telechargerSecours(v);return;
     case 'seance':DB.seance=+v;break;
     case 'fiche':DB.eleve=b.dataset.k;DB.vue='fiche';window.scrollTo(0,0);break;
-    case 'scanner':{let n0=0;TTQR.scanner(async t=>{const q=await TTQR.decoder(t);const r=importerQR(q);n0++;sauver();return '✓ '+r},{continu:true,titre:'QR codes des élèves',aide:'Montre les QR un par un devant la caméra.',onClose:n=>{if(n)journal(n+' QR code'+(n>1?'s':'')+' scanné'+(n>1?'s':''));choisirClasseParDefaut();sauver();rendre();if(n)proposerSauvegarde()}});return}
+    case 'scanner':{let n0=0;SCX=null;TTQR.scanner(async t=>{const q=await TTQR.decoder(t);const r=importerQR(q);n0++;sauver();return '✓ '+r},{continu:true,titre:'QR codes des élèves',aide:'Montre les QR un par un devant la caméra.',reste:resteScan,onClose:n=>{if(n)journal(n+' QR code'+(n>1?'s':'')+' scanné'+(n>1?'s':''));choisirClasseParDefaut();sauver();rendre();if(n)proposerSauvegarde()}});return}
     case 'sauvegarde':DB.saveAt=Date.now();sauver();telecharger('TT_prof_sauvegarde_'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(Object.assign({ttProf:1},DB)),'application/json');return;
     case 'effacer':if(!confirm('Effacer toutes les données de l’outil sur cet appareil ? (Exporte d’abord une sauvegarde.)'))return;DB=vide();break;
     case 'csv':exporter(v);return;
