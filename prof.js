@@ -648,6 +648,10 @@ function apStyle2(){if(document.getElementById('ap-style2'))return;const st=docu
 .ap-f4 .p.on{background:#15803d;border-color:#15803d;color:#fff}.ap-f4 .a.on{background:#b42318;border-color:#b42318;color:#fff}.ap-f4 .i.on{background:#ea580c;border-color:#ea580c;color:#fff}.ap-f4 .ip.on{background:#facc15;border-color:#eab308}
 .ap-fm{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.ap-fm button{min-height:46px;border-radius:999px;border:2px solid #cbd5e1;background:#fff;font:inherit;font-weight:700;font-size:15px;padding:0 14px;cursor:pointer}.ap-fm .on{background:#e0f2fe;border-color:#0369a1;color:#0369a1}
 .ap-ff{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.ap-ff .ap-nom{min-height:46px;border-radius:12px;border:2px solid #1c2128;background:#fff;padding:0 14px;font:inherit;font-weight:800;cursor:pointer}
+/* bilan : la carte d'un élève absent ou inapte prend la couleur de son statut (comme la grille d'appel) */
+.ap-l.bs-a{background:#b42318;border-color:#b42318;color:#fff}.ap-l.bs-i{background:#ea580c;border-color:#ea580c;color:#fff}.ap-l.bs-ip{background:#facc15;border-color:#eab308;color:#1c2128}
+.ap-l.bs-a .ap-nom,.ap-l.bs-i .ap-nom,.ap-l.bs-a .ap-info,.ap-l.bs-i .ap-info{color:#fff}.ap-l.bs-ip .ap-nom,.ap-l.bs-ip .ap-info{color:#1c2128}
+.ap-l.bs-a .ap-st,.ap-l.bs-i .ap-st,.ap-l.bs-ip .ap-st{background:#fff;font-weight:800}.ap-l.bs-a .ap-st{color:#b42318}.ap-l.bs-i .ap-st{color:#c2410c}.ap-l.bs-ip .ap-st{color:#854d0e}
 :root[data-theme="dark"] .ap-tete2,:root[data-theme="dark"] .ap-t:not(.t-a):not(.t-i):not(.t-ip),:root[data-theme="dark"] .ap-fen{background:#161b22;color:#e6edf3;border-color:#2a313b}
 `;document.head.appendChild(st)}
 /* toucher = statut suivant ; appui long (0,5 s) = fenêtre */
@@ -673,7 +677,7 @@ function apBilan(c,s,sNom,L,choix,dateTxt,modeHtml,K){
   const r=apRec(c,s),apDe=k=>(r&&r.el[k]&&r.el[k].ap)||0;const n={0:0,1:0,2:0,3:0,4:0};
   L.forEach(x=>{if(x.st.s!=='a')n[apDe(x.k)]++});
   const ligne=x=>{const v=apDe(x.k),abs=x.st.s==='a';
-    return `<li class="ap-l${v?' b-'+v:''}"><div class="ap-n">${APA.lien(x.k,x.nom)}${x.st.s?`<span class="ap-st">${AP4N[x.st.s]}</span>`:''}</div>
+    return `<li class="ap-l${v?' b-'+v:''}${x.st.s&&x.st.s!=='p'?' bs-'+x.st.s:''}"><div class="ap-n">${APA.lien(x.k,x.nom)}${x.st.s?`<span class="ap-st">${AP4N[x.st.s]}</span>`:''}</div>
       ${abs?'<p class="ap-info">Absent : pas d’appréciation.</p>':`<div class="ap-s" role="group" aria-label="Appréciation de ${esc(x.nom)}">${APPR.map(([q,e,l,col,bg])=>`<button type="button" data-apa="${esc(x.k)}|${q}" aria-pressed="${v===q}" title="${l}" style="${v===q?`background:${col};border-color:${col}`:`background:${bg}`}"><span aria-hidden="true">${e}</span><small>${l}</small></button>`).join('')}</div>`}</li>`};
   return `<h2>Bilan · ${esc(sNom)}</h2>${modeHtml}${choix||''}
    <p class="ap-date">${dateTxt}</p>
