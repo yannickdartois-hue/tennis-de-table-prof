@@ -511,7 +511,8 @@ const APA={db:()=>DB,sauver:()=>sauver(),rendre:()=>{const y=scrollY;rendre();sc
    L'adaptateur APA (défini juste avant ce bloc) relie le module à l'outil.
    Chantier 13 : « Bilan » de fin de cours = appréciation générale facultative (☹ 🙁 🙂 😃), champ « ap » (1 à 4)
    de la même entrée (élève × séance × date) : une seule par élève et par séance, modifiable, historique gardé.
-   Ce n'est ni une note ni une évaluation de compétence : rien n'est calculé à partir d'elle. */
+   Ce n'est ni une note ni une évaluation de compétence : rien n'est calculé à partir d'elle.
+   v2 (28/11/2026) : écran d'appel en grille d'étiquettes (voir apVue). */
 const AP4=[['p','Présent','P'],['a','Absent','A'],['i','Inapte','I'],['ip','Inapte partiel','IP']];
 const AP4N={p:'Présent',a:'Absent',i:'Inapte',ip:'Inapte partiel'};
 const APPR=[[1,'☹','Pas bon','#dc2626','#fee2e2'],[2,'🙁','Moyen','#ea580c','#ffedd5'],[3,'🙂','Bien','#65a30d','#ecfccb'],[4,'😃','Très bien','#15803d','#dcfce7']];
@@ -577,30 +578,96 @@ function apStyle(){if(document.getElementById('ap-style'))return;const st=docume
 .ap-s button[aria-pressed=true]{color:#fff}
 .ap-st{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:2px 8px;background:#eef2f6;color:#475569}
 .ap-l.b-1{border-color:#fca5a5}.ap-l.b-2{border-color:#fdba74}.ap-l.b-3{border-color:#bef264}.ap-l.b-4{border-color:#86efac}`;document.head.appendChild(st)}
-/* écran d'appel : c classe, s séance, sNom libellé, K [{k,nom,auto:{s,info,nonRecu}}], choix html du sélecteur de séance */
+/* écran d'appel : c classe, s séance, sNom libellé, K [{k,nom,auto:{s,info,nonRecu}}], choix html du sélecteur de séance
+   v2 (28/11/2026, à la demande de Yannick) : grille compacte d'étiquettes, tout le monde présent par défaut.
+   Un toucher sur un nom fait défiler : Présent → Absent → Inapte → Inapte partiel → Présent.
+   Appui long : fenêtre avec les 4 statuts, les précisions et le lien vers la fiche. */
+let AP_FEN=null;   /* clé de l'élève dont la fenêtre (appui long) est ouverte */
+const AP_CYCLE={p:'a',a:'i',i:'ip',ip:'p','':'a'};
+const AP_ICO={retard:'⏰ retard',tenue:'👕 tenue',just:'✉️ justifié',oubli:'📤 oubli d’envoi'};
 function apVue(c,s,sNom,K,choix){
-  apStyle();AP_CTX={c,s,K};
+  apStyle();apStyle2();AP_CTX={c,s,K};
   const r=apRec(c,s),L=K.map(x=>Object.assign({},x,{st:apStatut(c,s,x.k,x.auto)}));
   const n={p:0,a:0,i:0,ip:0,'':0};L.forEach(x=>n[x.st.s||'']++);
+  const recus=K.filter(x=>!(x.auto&&x.auto.nonRecu)).length;
   const auj=apJour(),dateTxt=r?`Appel du <b>${esc(apDateFr(r.d))}</b>${r.d!==auj?' · <span class="ap-info al">ce n’est pas aujourd’hui</span>':''}${apRecs(c,s).length>1?` · ${apRecs(c,s).length} appels pour cette séance`:''}`:`Rien d’enregistré pour cette séance : ce sera daté d’aujourd’hui (${esc(apDateFr(auj))}).`;
-  const ligne=x=>{const st=x.st,sel=st.s,auto=st.src==='auto'||st.src==='ancien';
-    const info=[st.src==='auto'&&x.auto&&x.auto.info?x.auto.info:'',st.src==='ancien'?'appel d’avant la mise à jour':''].filter(Boolean).join(' · ');
-    const al=x.auto&&x.auto.nonRecu?'⚠ carnet non reçu':'';
-    const pm=[];if(sel==='p'||sel==='ip'||sel==='i'){pm.push('retard');pm.push('tenue')}if(sel==='a')pm.push('just');if(x.auto&&x.auto.nonRecu&&sel&&sel!=='a')pm.push('oubli');
-    (st.m||[]).forEach(m=>{if(!pm.includes(m))pm.push(m)});
-    return `<li class="ap-l s-${sel||'n'}"><div class="ap-n">${APA.lien(x.k,x.nom)}${info?`<span class="ap-info">${esc(info)}</span>`:''}${al?`<span class="ap-info al">${al}</span>`:''}</div>
-      <div class="ap-b" role="group" aria-label="Statut de ${esc(x.nom)}">${AP4.map(([v,l,ab])=>`<button type="button" class="${v}${sel===v&&auto?' auto':''}" data-ap="${esc(x.k)}|${v}" aria-pressed="${sel===v}" title="${l}">${ab}<small>${l}</small></button>`).join('')}</div>
-      ${pm.length?`<div class="ap-m">${pm.map(m=>`<button type="button" data-apm="${esc(x.k)}|${m}" aria-pressed="${(st.m||[]).includes(m)}">${APM[m]}</button>`).join('')}</div>`:''}</li>`};
   const modeHtml=`<div class="ap-mode" role="group" aria-label="Écran"><button type="button" data-apmode="appel" aria-pressed="${AP_MODE!=='bilan'}">📋 Appel</button><button type="button" data-apmode="bilan" aria-pressed="${AP_MODE==='bilan'}">🙂 Bilan de fin de cours</button></div>`;
   if(AP_MODE==='bilan')return apBilan(c,s,sNom,L,choix,dateTxt,modeHtml,K);
+  const tuile=x=>{const st=x.st,sel=st.s||'',vu=sel||'p',auto=st.src!=='appel',m=st.m||[];
+    const tip=`${AP4N[vu]}${!sel?' (par défaut)':auto?' (proposé '+(APA.autoTxt||'automatiquement')+')':''}`;
+    return `<button type="button" class="ap-t t-${vu}${auto?' t-auto':''}${m.length?' t-m':''}" data-apt="${esc(x.k)}" title="${esc(x.nom)} : ${esc(tip)}" aria-label="${esc(x.nom)} : ${esc(tip)}">
+      <span class="ap-tn">${esc(x.nom)}</span><span class="ap-ts">${{p:'P',a:'A',i:'I',ip:'IP'}[vu]}</span>${m.length?`<span class="ap-tm">${m.map(z=>AP_ICO[z]||z).join(' · ')}</span>`:''}</button>`};
+  const nonR=n[''];
   return `<h2>Appel · ${esc(sNom)}</h2>${modeHtml}${choix||''}
    <p class="ap-date">${dateTxt}</p>
-   <div class="ap-tete"><span class="ap-cpt p">Présents ${n.p}</span><span class="ap-cpt a">Absents ${n.a}</span><span class="ap-cpt i">Inaptes ${n.i}</span><span class="ap-cpt ip">Inaptes partiels ${n.ip}</span>${n['']?`<span class="ap-cpt n">Non renseignés ${n['']}</span>`:''}</div>
-   <div class="ap-act">${n['']?`<button type="button" data-apx="tous">✓ Les ${n['']} non renseigné${n['']>1?'s':''} : présents</button>`:''}${r&&r.d!==auj&&!APA.sansRefaite?'<button type="button" class="sec" data-apx="refaite">📅 Séance refaite aujourd’hui (nouvel appel)</button>':''}<button type="button" class="sec" data-apx="csv">⬇ Exporter l’appel (CSV)</button></div>
-   <ul class="ap-liste">${L.map(ligne).join('')}</ul>
-   <p class="small muted">Touchez le statut ; touchez-le à nouveau pour l’enlever. Pointillés = statut proposé automatiquement${APA.autoTxt?' ('+APA.autoTxt+')':''} : le toucher le confirme. Absent et inapte sont toujours distincts. Tout est gardé sur l’appareil (hors connexion) et dans la sauvegarde.</p>
-   ${apRecap(c,K)}`;
+   <div class="ap-tete2"><span class="ap-cpt p">${n.p+nonR} présent${n.p+nonR>1?'s':''}</span><span class="ap-cpt a">${n.a} absent${n.a>1?'s':''}</span><span class="ap-cpt i">${n.i} inapte${n.i>1?'s':''}</span><span class="ap-cpt ip">${n.ip} inapte${n.ip>1?'s':''} partiel${n.ip>1?'s':''}</span><span class="ap-recus">📥 ${recus} carnet${recus>1?'s':''} reçu${recus>1?'s':''} sur ${K.length}</span></div>
+   <p class="ap-aide">Tout le monde est présent. <b>Touche un nom</b> : Absent → Inapte → Inapte partiel → Présent. <b>Appui long</b> : retard, tenue, absence justifiée, fiche de l’élève.</p>
+   <div class="ap-grille">${L.map(tuile).join('')}</div>
+   <p class="ap-leg"><span><i class="lp"></i>P présent</span><span><i class="la"></i>A absent</span><span><i class="li"></i>I inapte</span><span><i class="lip"></i>IP inapte partiel</span><span>Pointillés : statut proposé, pas encore confirmé</span></p>
+   <div class="ap-act2">${nonR?`<button type="button" class="ap-fin" data-apx="tous">✓ Appel terminé : ${nonR} présent${nonR>1?'s':''} à enregistrer</button>`:`<span class="ap-ok">✓ Appel enregistré</span>`}<button type="button" class="sec" data-apmode="bilan">🙂 Bilan</button></div>
+   <div class="ap-act">${r&&r.d!==auj&&!APA.sansRefaite?'<button type="button" class="sec" data-apx="refaite">📅 Séance refaite aujourd’hui (nouvel appel)</button>':''}<button type="button" class="sec" data-apx="csv">⬇ Exporter l’appel (CSV)</button></div>
+   ${apRecap(c,K)}${AP_FEN?apFen(L.find(x=>x.k===AP_FEN)):''}`;
 }
+/* fenêtre de l'appui long : 4 statuts, précisions, fiche */
+function apFen(x){if(!x)return '';const st=x.st,sel=st.s||'p',m=st.m||[];
+  const pm=sel==='a'?['just']:['retard','tenue'];if(x.auto&&x.auto.nonRecu&&sel!=='a')pm.push('oubli');m.forEach(z=>{if(!pm.includes(z))pm.push(z)});
+  return `<div class="ap-voile" data-apfx="1"><div class="ap-fen" role="dialog" aria-label="${esc(x.nom)}"><div class="ap-fh"><b>${esc(x.nom)}</b><button type="button" class="ap-fx" data-apfx="1" aria-label="Fermer">✕</button></div>
+   <div class="ap-f4">${AP4.map(([v,l,ab])=>`<button type="button" class="${v}${sel===v?' on':''}" data-ap4="${esc(x.k)}|${v}" aria-pressed="${sel===v}">${ab}<small>${l}</small></button>`).join('')}</div>
+   <div class="ap-fm">${pm.map(z=>`<button type="button" class="${m.includes(z)?'on':''}" data-apm="${esc(x.k)}|${z}" aria-pressed="${m.includes(z)}">${AP_ICO[z]||APM[z]}</button>`).join('')}</div>
+   <div class="ap-ff">${APA.lien(x.k,'📄 Fiche de l’élève')}${x.auto&&x.auto.info?`<span class="ap-info">${esc(x.auto.info)}</span>`:x.auto&&x.auto.nonRecu?'<span class="ap-info">carnet pas encore reçu</span>':''}</div></div></div>`}
+function apStyle2(){if(document.getElementById('ap-style2'))return;const st=document.createElement('style');st.id='ap-style2';st.textContent=`
+.ap-tete2{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#fff;border:1px solid #dde2e8;border-radius:16px;padding:10px 12px;margin:8px 0}
+.ap-tete2 .ap-cpt{font-size:16px;padding:6px 12px}.ap-tete2 .ap-cpt.i{background:#ffedd5;color:#9a3412}.ap-tete2 .ap-cpt.ip{background:#fef9c3;color:#854d0e}
+.ap-recus{margin-left:auto;font-size:15px;color:#5b6470}
+.ap-aide{font-size:15px;color:#5b6470;margin:4px 2px 10px;line-height:1.35}
+.ap-grille{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media(min-width:620px){.ap-grille{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:760px){.ap-grille{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}}
+.ap-t{position:relative;min-height:58px;border-radius:14px;border:2px solid #cfe9d6;background:#fff;padding:8px 44px 8px 12px;text-align:left;font:inherit;font-weight:700;font-size:16px;line-height:1.15;color:#1c2128;display:flex;flex-direction:column;justify-content:center;cursor:pointer;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+.ap-tn{overflow-wrap:anywhere}
+.ap-ts{position:absolute;right:8px;top:50%;transform:translateY(-50%);min-width:30px;height:30px;padding:0 4px;border-radius:999px;display:grid;place-items:center;font-weight:900;font-size:14px;background:#e7f6ec;color:#15803d}
+.ap-tm{display:block;font-size:12.5px;font-weight:700;margin-top:3px;opacity:.95}
+.ap-t.t-a{background:#b42318;border-color:#b42318;color:#fff}.ap-t.t-a .ap-ts{background:#fff;color:#b42318}
+.ap-t.t-i{background:#ea580c;border-color:#ea580c;color:#fff}.ap-t.t-i .ap-ts{background:#fff;color:#c2410c}
+.ap-t.t-ip{background:#facc15;border-color:#eab308;color:#1c2128}.ap-t.t-ip .ap-ts{background:#fff;color:#854d0e}
+.ap-t.t-auto{border-style:dashed}.ap-t.t-auto.t-a,.ap-t.t-auto.t-i,.ap-t.t-auto.t-ip{opacity:.82}
+.ap-leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13.5px;color:#5b6470;margin:10px 2px}.ap-leg i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.ap-leg .lp{background:#15803d}.ap-leg .la{background:#b42318}.ap-leg .li{background:#ea580c}.ap-leg .lip{background:#facc15}
+.ap-act2{display:flex;gap:10px;margin:12px 0 6px;align-items:stretch}
+.ap-act2 .ap-fin{flex:1;min-height:56px;border-radius:14px;border:0;background:#15803d;color:#fff;font:inherit;font-weight:800;font-size:17px;cursor:pointer}
+.ap-act2 .ap-ok{flex:1;display:grid;place-items:center;min-height:56px;border-radius:14px;background:#dcfce7;color:#166534;font-weight:800;font-size:17px}
+.ap-act2 .sec{min-height:56px;border-radius:14px;border:2px solid #1c2128;background:#fff;font:inherit;font-weight:800;font-size:16px;padding:0 16px;cursor:pointer}
+.ap-voile{position:fixed;inset:0;z-index:2147483000;background:rgba(15,20,30,.45);display:flex;align-items:flex-end;justify-content:center}
+@media(min-width:620px){.ap-voile{align-items:center}}
+.ap-fen{background:#fff;color:#1c2128;border-radius:22px 22px 0 0;padding:16px 16px 24px;width:100%;max-width:520px;max-height:90vh;overflow:auto}
+@media(min-width:620px){.ap-fen{border-radius:22px}}
+.ap-fh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.ap-fh b{font-size:21px}
+.ap-fx{min-width:46px;min-height:46px;border-radius:12px;border:2px solid #cbd5e1;background:#fff;font-size:18px;cursor:pointer}
+.ap-f4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.ap-f4 button{min-height:60px;border-radius:12px;border:2px solid #cbd5e1;background:#fff;font:inherit;font-weight:900;font-size:18px;cursor:pointer;line-height:1.1}.ap-f4 small{display:block;font-size:12px;font-weight:700}
+.ap-f4 .p.on{background:#15803d;border-color:#15803d;color:#fff}.ap-f4 .a.on{background:#b42318;border-color:#b42318;color:#fff}.ap-f4 .i.on{background:#ea580c;border-color:#ea580c;color:#fff}.ap-f4 .ip.on{background:#facc15;border-color:#eab308}
+.ap-fm{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.ap-fm button{min-height:46px;border-radius:999px;border:2px solid #cbd5e1;background:#fff;font:inherit;font-weight:700;font-size:15px;padding:0 14px;cursor:pointer}.ap-fm .on{background:#e0f2fe;border-color:#0369a1;color:#0369a1}
+.ap-ff{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.ap-ff .ap-nom{min-height:46px;border-radius:12px;border:2px solid #1c2128;background:#fff;padding:0 14px;font:inherit;font-weight:800;cursor:pointer}
+:root[data-theme="dark"] .ap-tete2,:root[data-theme="dark"] .ap-t:not(.t-a):not(.t-i):not(.t-ip),:root[data-theme="dark"] .ap-fen{background:#161b22;color:#e6edf3;border-color:#2a313b}
+`;document.head.appendChild(st)}
+/* toucher = statut suivant ; appui long (0,5 s) = fenêtre */
+let AP_LONG=null,AP_LONGFAIT=false;
+document.addEventListener('pointerdown',e=>{const t=e.target.closest&&e.target.closest('[data-apt]');if(!t)return;AP_LONGFAIT=false;clearTimeout(AP_LONG);
+  AP_LONG=setTimeout(()=>{AP_LONGFAIT=true;AP_FEN=t.dataset.apt;try{navigator.vibrate&&navigator.vibrate(15)}catch(x){}APA.rendre()},500)},true);
+['pointerup','pointercancel','pointerleave'].forEach(ev=>document.addEventListener(ev,()=>clearTimeout(AP_LONG),true));
+document.addEventListener('scroll',()=>clearTimeout(AP_LONG),true);
+document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('[data-apt]'))e.preventDefault()},true);
+document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('[data-apt],[data-ap4],[data-apfx]');if(!b||!AP_CTX)return;
+  if(b.dataset.apfx!=null){if(e.target.closest('.ap-fen')&&!e.target.closest('.ap-fx'))return;e.preventDefault();e.stopPropagation();AP_FEN=null;APA.rendre();return}
+  e.preventDefault();e.stopPropagation();const {c,s,K}=AP_CTX;
+  if(b.dataset.apt!=null){if(AP_LONGFAIT){AP_LONGFAIT=false;return}
+    const k=b.dataset.apt,x=K.find(y=>y.k===k)||{},st=apStatut(c,s,k,x.auto),nx=AP_CYCLE[st.s||''];
+    apModifier(c,s,k,en=>{en.s=nx;if(nx!=='a')en.m=en.m.filter(m=>m!=='just');else en.m=en.m.filter(m=>m==='just');return en})}
+  else{const v=b.dataset.ap4,i=v.lastIndexOf('|'),k=v.slice(0,i),val=v.slice(i+1);
+    apModifier(c,s,k,en=>{en.s=val;if(val!=='a')en.m=en.m.filter(m=>m!=='just');else en.m=en.m.filter(m=>m==='just');return en})}
+  APA.sauver();APA.rendre();
+},true);
 /* Bilan de fin de cours : une appréciation facultative par élève (un toucher ; re-toucher l'enlève) */
 function apBilan(c,s,sNom,L,choix,dateTxt,modeHtml,K){
   const r=apRec(c,s),apDe=k=>(r&&r.el[k]&&r.el[k].ap)||0;const n={0:0,1:0,2:0,3:0,4:0};
@@ -636,7 +703,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.ap!=null){const v=b.dataset.ap,i=v.lastIndexOf('|'),k=v.slice(0,i),val=v.slice(i+1),x=K.find(y=>y.k===k)||{},st=apStatut(c,s,k,x.auto);
     apModifier(c,s,k,en=>{en.s=st.src==='appel'&&st.s===val?'':val;if(en.s!=='a')en.m=en.m.filter(m=>m!=='just');if(en.s==='a')en.m=en.m.filter(m=>m==='just');return en})}
   else if(b.dataset.apm!=null){const v=b.dataset.apm,i=v.lastIndexOf('|'),k=v.slice(0,i),m=v.slice(i+1),x=K.find(y=>y.k===k)||{},st=apStatut(c,s,k,x.auto);
-    apModifier(c,s,k,en=>{if(!en.s&&st.s)en.s=st.s;const j=en.m.indexOf(m);if(j>=0)en.m.splice(j,1);else en.m.push(m);return en})}
+    apModifier(c,s,k,en=>{if(!en.s)en.s=st.s||'p';const j=en.m.indexOf(m);if(j>=0)en.m.splice(j,1);else en.m.push(m);return en})}
   else if(b.dataset.apmode!=null){AP_MODE=b.dataset.apmode==='bilan'?'bilan':'appel';try{localStorage.setItem('eps-ap-mode:'+location.pathname,AP_MODE)}catch(x){}}
   else if(b.dataset.apa!=null){const v=b.dataset.apa,i=v.lastIndexOf('|'),k=v.slice(0,i),q=+v.slice(i+1);
     if(apStatut(c,s,k,(K.find(y=>y.k===k)||{}).auto).s==='a')return;apModifier(c,s,k,en=>{en.ap=en.ap===q?0:q;return en})}
