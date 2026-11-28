@@ -303,7 +303,7 @@ function vFiche(){
     <div class="rangee"><select id="fusion"><option value="">— Choisir —</option>${autres.map(a=>`<option value="${esc(a)}">${esc(nomAffiche(a))}</option>`).join('')}</select><button class="bt mini" type="button" data-act="fusionner">Fusionner dans ${esc(nomAffiche(k))}</button></div></section>`:''}`;
 }
 function vExport(){
-  return `<h2>Exporter pour la note</h2>${AVT('tableau','Vérifie les notes avant de les reporter dans Pronote.')}<p class="muted small">Fichiers .csv à ouvrir dans Excel ou LibreOffice (séparateur point-virgule). Classe : ${esc(DB.classe||'—')}.</p>
+  return `<h2>Exporter pour la note</h2>${cahierLien()}${AVT('tableau','Vérifie les notes avant de les reporter dans Pronote.')}<p class="muted small">Fichiers .csv à ouvrir dans Excel ou LibreOffice (séparateur point-virgule). Classe : ${esc(DB.classe||'—')}.</p>
   <div class="grille2">
     <section class="carte"><h3>Bilan par élève</h3><p class="small muted">Une ligne par élève : classement du cycle, absences, dispenses, matchs, V, D, % de victoires, manches et points gagnés-perdus, poule moyenne, meilleure et dernière poule, rang moyen, exercices, changements d’axe.</p><button class="bt orange" type="button" data-act="csv" data-v="bilan">Télécharger</button></section>
     <section class="carte"><h3>Tournoi séance par séance</h3><p class="small muted">Une ligne par élève et par séance : poule, rang, points, V, D, manches, points.</p><button class="bt noir" type="button" data-act="csv" data-v="tournoi">Télécharger</button></section>
@@ -500,6 +500,9 @@ const APA={db:()=>DB,sauver:()=>sauver(),rendre:()=>{const y=scrollY;rendre();sc
   nom:k=>nomAffiche(k),nomSeance:s=>'séance '+s,autoTxt:'d’après les séances et poules reçues',
   ancien:(c,s,k)=>{const o=(DB.appel||{})[norm(c)+'|'+s+'|'+k];return o?AP_ANCIEN[o]||null:null},
   autoDe:(k,s)=>autoAp(k,+s,resultatsPoules(),arbitrages())};
+/* lien vers le cahier de textes (résumés Pronote) de l'écran de cours du cycle */
+const CAHIER_URL='https://yannickdartois-hue.github.io/cycle-tennis-de-table/index.html#cahier';
+function cahierLien(){return `<a href="${CAHIER_URL}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:12px;min-height:56px;margin:10px 0 14px;padding:10px 14px;border-radius:14px;border:2px solid #334155;background:#fff;color:#1c2128;text-decoration:none;font-weight:800;font-size:17px"><span style="font-size:24px">📋</span><span>Cahier de textes · résumés à coller dans Pronote<small style="display:block;font-weight:400;font-size:14px;color:#5b6470">Ouvre l’écran de cours du cycle (texte de chaque séance, PDF, Word)</small></span></a>`}
 /* ===================== Appel (chantier 10, 26/11/2026) =====================
    Repris du module d'appel de Demi-fond et mis à niveau. Code propre à cet outil (copie autonome). Ici, la liste des appréciations s'appelle APPR (APP est déjà pris par prof-oubli.js).
    4 statuts exclusifs : Présent · Absent · Inapte · Inapte partiel (absent ≠ inapte, partout).
